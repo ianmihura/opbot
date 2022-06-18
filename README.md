@@ -1,7 +1,15 @@
-opbot
+Option Trading Bot
 ==============================
 
-Option Trading bot
+TO DO's
+------------
+
+* [ ] Build the ETL pipeline and get historical data from Deribit API
+  * [ ] Design the data warehouse structure
+  * [ ] Design the extraction from the API
+  * [ ] Define how data will be transformed before being loaded to the DB
+* [ ] Design the RL algorithm to learn how to trade
+* [ ] Build the environment that constructs the state space, computes rewards and manages the porfolio during training and validation.
 
 Project Organization
 ------------
@@ -10,8 +18,6 @@ Project Organization
     ├── Makefile           <- Makefile with commands like `make data` or `make train`
     ├── README.md          <- The top-level README for developers using this project.
     ├── data
-    │   ├── external       <- Data from third party sources.
-    │   ├── interim        <- Intermediate data that has been transformed.
     │   ├── processed      <- The final, canonical data sets for modeling.
     │   └── raw            <- The original, immutable data dump.
     │
