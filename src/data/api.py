@@ -1,12 +1,7 @@
-from os import environ as env
-from dotenv import load_dotenv
-load_dotenv()
 from datetime import datetime
 import requests
 from urllib.parse import quote
 import json
-
-import pdb
 
 def coingecko_symbol_history(symbol: str, start_date: datetime = datetime(2020,12,31), end_date: datetime = datetime.now()) -> str:
     """Coin history, in USD. 
@@ -62,21 +57,6 @@ def deribit_all_instruments(symbol: str, kind: str = 'option', expired: bool = F
     return f'https://www.deribit.com/api/v2/public/get_instruments?currency={s}&expired={e}&kind={k}'
 
 
-
-
-# # Coin Gecko API. origin: 1643932800000
-# def correct_crypto_time(x):
-#     # TODO: what timestamp do we need?
-#     return int(datetime.timestamp(datetime.fromtimestamp(x[0]/1000).replace(hour=0)))
-
-# # Formatting raw input
-# def format_coingecko(jraw):
-#     data = jraw['prices']
-#     timestamps = [*map(correct_crypto_time, data)]
-#     prices = [*map(lambda x: x[1], data)]
-#     z_data = [*zip(timestamps, prices)]
-#     z_data.reverse()
-#     return z_data
 
 def get_deribit_symbols(coin):
     try:
@@ -170,13 +150,5 @@ def main():
 
     save_coingecko_symbol('bitcoin')
     save_coingecko_symbol('ethereum')
-
-    # f = open('./data/raw/deribit_vol_BTC.json')
-    # symbols = json.load(f)
-    # timestamps = list(map(lambda x: datetime.fromtimestamp(x[0]/1000), symbols))
-    # timestamps = [list(map(lambda x: datetime.fromtimestamp(x/1000), symbols[symbol]['ticks'])) for symbol in symbols]
-    # print([t[0] for t in timestamps if len(t)])
-    # print(timestamps)
-
 
 main()
