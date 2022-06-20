@@ -142,7 +142,7 @@ def get_coingecko_symbol(symbol: str) -> dict:
         return {}
 
 
-def save_deribit_symbols(coin):
+def save_deribit_symbols(coin: str):
     symbols = get_deribit_symbols(coin)
     symbols = symbols[:10]  # for test
 
@@ -152,13 +152,13 @@ def save_deribit_symbols(coin):
         json.dump(data, raw)
 
 
-def save_deribit_vol(symbol):
+def save_deribit_vol(symbol: str):
     data = get_deribit_vol(symbol)
     with open(f'./data/raw/deribit_vol_{symbol}.json', 'w') as raw:
         json.dump(data, raw)
 
 
-def save_coingecko_symbol(symbol):
+def save_coingecko_symbol(symbol: str):
     data = get_coingecko_symbol(symbol)
     with open(f'./data/raw/coingecko_symbol_{symbol}.json', 'w') as raw:
         json.dump(data, raw)
