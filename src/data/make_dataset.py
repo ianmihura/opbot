@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
+import os
 import click
 import logging
 from pathlib import Path
 from dotenv import find_dotenv, load_dotenv
+import sqlite3
 
 
 @click.command()
@@ -10,10 +12,18 @@ from dotenv import find_dotenv, load_dotenv
 @click.argument('output_filepath', type=click.Path())
 def main(input_filepath, output_filepath):
     """ Runs data processing scripts to turn raw data from (../raw) into
-        cleaned data ready to be analyzed (saved in ../processed).
+    cleaned data ready to be analyzed (saved in ../processed).
     """
     logger = logging.getLogger(__name__)
     logger.info('making final data set from raw data')
+
+    # read and connect to the output filepath (destination DW)
+    con = sqlite3.connect(os.path.join(output_filepath, "datawarehouse.db"))
+
+    # get the underlying asset data from coingecko
+
+    # get options data from deribit
+
 
 
 if __name__ == '__main__':
