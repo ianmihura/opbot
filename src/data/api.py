@@ -1,11 +1,10 @@
 from os import environ as env
 from dotenv import load_dotenv
 load_dotenv()
-from datetime import date, datetime
+from datetime import datetime
 import requests
 from urllib.parse import quote
 
-# APIs
 def coingecko_symbol_history(symbol: str, start_date: datetime = datetime(2020,12,31), end_date: datetime = datetime.now()) -> str:
     """Coin history, in USD. 
     Symbol example: 'bitcoin' or 'ethereum'
@@ -16,15 +15,17 @@ def coingecko_symbol_history(symbol: str, start_date: datetime = datetime(2020,1
     end = int(end_date.timestamp()*1000)
     return f'https://api.coingecko.com/api/v3/coins/{s}/market_chart/range?vs_currency=usd&from={start}&to={end}'
 
-def deribit_symbol_history(symbol: str, start_date: datetime = datetime(2020,12,31), end_date: datetime = datetime.now()) -> str:
+def deribit_symbol_history(symbol: str, resolution: str = '60', start_date: datetime = datetime(2020,12,31), end_date: datetime = datetime.now()) -> str:
     """Symbol price history. 
     Symbol example: 'BTC-1JUL22-12000-C'
+    Resolution: int (minutes) or 1D
     Default timestamps: Start (December 31, 2020), End (now)
     """
     s = quote(symbol)
+    r = quote(resolution)
     start = int(start_date.timestamp()*1000)
     end = int(end_date.timestamp()*1000)
-    return f'https://www.deribit.com/api/v2/public/get_mark_price_history?start_timestamp={start}&end_timestamp={end}&instrument_name={s}'
+    return f'https://www.deribit.com/api/v2/public/get_tradingview_chart_data?start_timestamp={start}&end_timestamp={end}&instrument_name={s}&resolution={r}'
 
 def deribit_vol_index(symbol: str, resolution: str = '3600', start_date: datetime = datetime(2020,12,31), end_date: datetime = datetime.now()) -> str:
     """Volatility history.
@@ -39,14 +40,22 @@ def deribit_vol_index(symbol: str, resolution: str = '3600', start_date: datetim
     return f'https://www.deribit.com/api/v2/public/get_volatility_index_data?currency={s}&start_timestamp={start}&end_timestamp={end}&resolution={r}'
 
 def deribit_ticker(symbol: str) -> str:
+    """Ticker metadata, greeks and IV. 
+    Symbol example: 'BTC-1JUL22-12000-C'
+    """
     s = quote(symbol)
-    # get_ticker
-    return f''
+    return f'https://www.deribit.com/api/v2/public/ticker?instrument_name={s}'
 
-def deribit_all_instruments(currency: str, kind: str = 'option', expired: bool = False) -> str:
-    c = quote(currency)
-    # get_instruments
-    return f''
+def deribit_all_instruments(symbol: str, kind: str = 'option', expired: bool = False) -> str:
+    """Get all instruments.
+    Symbol example: 'BTC'
+    Kind: 'option' or 'future'
+    Expired: 'false' or 'true'
+    """
+    s = quote(symbol)
+    e = 'true' if expired else 'false'
+    k = quote(kind)
+    return f'https://www.deribit.com/api/v2/public/get_instruments?currency={s}&expired={e}&kind={k}'
 
 
 
