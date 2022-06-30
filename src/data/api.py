@@ -1,7 +1,14 @@
 from datetime import datetime
+import os
 import requests
 from urllib.parse import quote
 import json
+
+
+symbols = {
+    'bitcoin': 'BTC',
+    'ethereum': 'ETH'
+}
 
 
 def coingecko_symbol_history(
@@ -52,7 +59,7 @@ def deribit_vol_index(
     return f'https://www.deribit.com/api/v2/public/get_volatility_index_data?currency={s}&start_timestamp={start}&end_timestamp={end}&resolution={r}'
 
 
-# Not used yet
+# Not used yet - will be used to benchmark greeks & iv calculations
 def deribit_ticker(symbol: str) -> str:
     """Ticker metadata, greeks and IV.
     Symbol example: 'BTC-1JUL22-12000-C'
@@ -82,6 +89,8 @@ def get_deribit_symbols(coin: str) -> list:
         raw = requests.get(api_url)
         data = raw.json()['result']
         symbols = [s['instrument_name'] for s in data if s['kind'] == 'option']
+
+        # TODO: save other data as creation date, ticker size, min trade size, etc...
 
         print('Get Symbols -- Query successful')
         return symbols
@@ -148,23 +157,30 @@ def save_deribit_symbols(coin: str):
 
     data = dict(zip(symbols, map(get_deribit_symbol, symbols)))
 
-    with open(f'./data/raw/deribit_symbols_{coin}.json', 'w') as raw:
+    with open(f'./data/raw/symbols/{coin}.json', 'w') as raw:
         json.dump(data, raw)
 
 
 def save_deribit_vol(symbol: str):
     data = get_deribit_vol(symbol)
-    with open(f'./data/raw/deribit_vol_{symbol}.json', 'w') as raw:
+    with open(f'./data/raw/volatility/{symbol}.json', 'w') as raw:
         json.dump(data, raw)
 
 
 def save_coingecko_symbol(symbol: str):
     data = get_coingecko_symbol(symbol)
-    with open(f'./data/raw/coingecko_symbol_{symbol}.json', 'w') as raw:
+    with open(f'./data/raw/underlying/{symbols[symbol]}.json', 'w') as raw:
         json.dump(data, raw)
 
 
 def main():
+    if not os.path.exists('./data/raw/symbols'):
+        os.mkdir('./data/raw/symbols')
+    if not os.path.exists('./data/raw/volatility'):
+        os.mkdir('./data/raw/volatility')
+    if not os.path.exists('./data/raw/underlying'):
+        os.mkdir('./data/raw/underlying')
+
     save_deribit_symbols('BTC')
     save_deribit_symbols('ETH')
 
