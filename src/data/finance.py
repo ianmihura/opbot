@@ -1,95 +1,73 @@
 # https://github.com/hashABCD/opstrat/blob/main/opstrat/blackscholes.py
+# https://github.com/yassinemaaroufi/MibianLib/blob/master/mibian/__init__.py
 import numpy as np
 from scipy.stats import norm
-import pdb
 
 
-def black_scholes(
+def metrics(
         K: float = 60, 
         St: float = 62,
         v: float = 0.32, 
         r: float = 0.04, 
         t: float = 40,
-        type: str = 'c') -> dict:
+        type: str = 'c',
+        market_price: float = 1000) -> dict:
     """Calculates all Black Scholes information: IV, greeks & fair value
     K : Strike Price
-    St: Current Stock Price
+    St: Current Stock Price (underlying)
     v : Volatility % (sigma)
     r : Risk free rate %
     t : Time to expiration in days
     type: Type of option 'c' for call 'p' for put
         default: 'c'
+    market_price : Market price of the contract
     """
-    # default option: call
-    try:
-        type=type.lower()
-        if (type != 'c' and type != 'p'):
-            type = 'c'
-    except:
-        type = 'c'
-
     #Check time 
     try:
         #convert time in days to years
         t=t/365
     except:
         raise TypeError("Enter numerical value for time")
-
-    #Check risk free rate 
-    try:
-        r=r+0
-    except:
-        raise TypeError("Enter numerical value for risk free rate")
-    
-    #Check volatility
-    try:
-        v=v+0
-    except:
-        raise TypeError("Enter numerical value for volatility")  
-
-    #Check Stock Price
-    try:
-        St=St+0
-    except:
-        raise TypeError("Enter numerical value for stock price")
-    
-    #Check Exercise Price
-    try:
-        K=K+0
-    except:
-        raise TypeError("Enter numerical value for Exercise price")    
     
     #1. CALCULATE OPTION BASE VALUES
-    # pdb.set_trace()
-    val, d1, N_d1, N_d2 = bs(K, St, v, r, t, type)
+    val, d1, N_d1, N_d2 = black_scholes(K, St, v, r, t, type)
 
     val_int = max(0,St-K) if type == 'c' else max(0,K-St)
     val_ext = val - val_int
 
-    value = {'val':val, 'val_int':val_int, 'val_ext':val_ext}
-
     #2. CALCULATE OPTION IV
-    #initial guess = 100
-    #evaluate for that guess
-
+    iv = implied_volatility(K, St, r, t, type, market_price)
+    
     #3. CALCULATE OPTION GREEKS
     if type=='c':
         delta=N_d1
         theta=(-((St*v*np.exp(-np.power(d1,2)/2))/(np.sqrt(8*np.pi*t)))-(N_d2*r*K*np.exp(-r*t)))/365
+        # theta=(-St*np.exp(-r*t)*norm.pdf(d1)*v/(2*t**0.5))/100
         rho=t*K*N_d2*np.exp(-r*t)/100
     else:
         delta=-N_d1
         theta=(-((St*v*np.exp(-np.power(d1,2)/2))/(np.sqrt(8*np.pi*t)))+(N_d2*r*K*np.exp(-r*t)))/365
         rho=-t*K*N_d2*np.exp(-r*t)/100
 
-    gamma=(np.exp(-np.power(d1,2)/2))/(St*v*np.sqrt(2*np.pi*t))
-    vega=(St*np.sqrt(t)*np.exp(-np.power(d1,2)/2))/(np.sqrt(2*np.pi)*100)
+    # gamma=(np.exp(-np.power(d1,2)/2))/(St*v*np.sqrt(2*np.pi*t))
+    gamma=norm.pdf(d1)*np.exp(-r*t)/(St*v*t)
+
+    # vega=(St*np.sqrt(t)*np.exp(-np.power(d1,2)/2))/(np.sqrt(2*np.pi)*100)
+    vega=St*np.exp(-r*t)*norm.pdf(d1)*t**0.5/100
     
-    greeks={'delta':delta, 'gamma':gamma, 'theta':theta, 'vega':vega, 'rho':rho}
+    return {
+        'val': val, 
+        'val_int': val_int, 
+        'val_ext': val_ext, 
+        'd': delta,
+        'g': gamma,
+        't': theta,
+        'v': vega,
+        'r': rho,
+        'iv': iv}
 
-    return {'value':value, 'greeks':greeks}
 
-def bs(
+def black_scholes(
         K: float = 60,
         St: float = 62,
         v: float = 0.32,
@@ -107,8 +85,6 @@ def bs(
     
     returns:
     val: Fair value
-    val_int: Fair intrinsic value
-    val_time: Fair time value
     d1: d1 term
     N_d1: Normalized d1 term
     N_d2: Normalized d2 term
@@ -132,20 +108,37 @@ def bs(
     return val, d1, N_d1, N_d2
 
 
-#TODO document and check values
-def implied_volatility(K, St, r, t, market_price, type='c', tol=0.0001, max_iter=200, v_init=1):
+def implied_volatility(
+        K: float = 60,
+        St: float = 62,
+        r: float = 0.04,
+        t: float = 0.027,
+        type: str = 'c',
+        market_price: float = 1000,
+        tol: float = 0.0001, 
+        max_iter: int = 200, 
+        v_init: float = 1.0):
     """Calculate IV of an Option
+    K : Strike Price
+    St: Current Stock Price
+    r : Risk free rate %
+    t : Time to expiration in days/365
+    type: Type of option 'c' for call 'p' for put
+        default: 'c'
+    market_price : Market price of the contract
+    tol : Error tolerance
+    max_iter : Max amount of interations
+    v_init : Initial volatility to assume (best if near to real volatility)
     """
-
     # Assume initial aprox
     v_old = v_init
 
     for i in range(max_iter):
         # Calculate Black Scholes fair price for v_old, sigma_n
-        bs_price, d1, _, _ = bs(K, St, v_old, r, t/365, type)
+        bs_price, d1, _, _ = black_scholes(K, St, v_old, r, t, type)
 
         # Volatility decay, c'(sigma_n)
-        vega = (St*np.sqrt(t/365)*np.exp(-np.power(d1/100,2)/2))/(np.sqrt(2*np.pi)*100) * 100
+        vega = (St*np.sqrt(t)*np.exp(-np.power(d1/100,2)/2))/(np.sqrt(2*np.pi)*100) * 100
         
         # New implied volatility, sigma_n+1
         v_new = v_old - (bs_price - market_price)/vega
@@ -157,16 +150,16 @@ def implied_volatility(K, St, r, t, market_price, type='c', tol=0.0001, max_iter
     
     return v_new
 
-# TODO: volatilities and greeks give veeeeery different values
-market_price = 1018.2
-St = 20210
-K = 17000
-t = 36
-r = 0.04
-v = 0.9835
-type = 'p'
 
-b = black_scholes(K, St, v, r, t, type)
-iv = implied_volatility(K, St, r, t, market_price, type)
+# Values are very different for those in Deribit web. Why is this?
+# TODO: test this with real data, mean squared error
+# market_price = 679.2
+# K = 23000
+# St = 20053
+# v = 0.9112
+# r = 0.04
+# t = 29
+# type = 'c'
 
-print(b, iv)
+# b = metrics(K, St, v, r, t, type, market_price)
+# print(b)
