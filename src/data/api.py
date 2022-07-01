@@ -1,28 +1,25 @@
 from datetime import datetime
 import os
+import time
 import requests
 from urllib.parse import quote
 import json
+import dotenv
 
 
-symbols = {
-    'bitcoin': 'BTC',
-    'ethereum': 'ETH'
-}
-
-
-def coingecko_symbol_history(
+def polygon_symbol_history(
         symbol: str,
-        start_date: datetime = datetime(2020, 12, 31),
-        end_date: datetime = datetime.now()) -> str:
+        start_date: str = datetime(2020, 12, 31),
+        end_date: str = datetime.now()) -> str:
     """Coin history, in USD.
-    Symbol example: 'bitcoin' or 'ethereum'
-    Default timestamps: Start (December 31, 2020), End (now)
+    Symbol example: 'BTC' or 'ETH'
+    Default timestamps: Start (December 31, 2021), End (now)
     """
+    POLY_API = os.environ.get("POLY_API")
     s = quote(symbol)
-    start = int(start_date.timestamp())
-    end = int(end_date.timestamp())
-    return f'https://api.coingecko.com/api/v3/coins/{s}/market_chart/range?vs_currency=usd&from={start}&to={end}'
+    s_date = start_date.strftime("%Y-%m-%d")
+    e_date = end_date.strftime("%Y-%m-%d")
+    return f'https://api.polygon.io/v2/aggs/ticker/X:{s}USD/range/1/hour/{s_date}/{e_date}?adjusted=true&sort=asc&limit=50000&apiKey={POLY_API}'
 
 
 def deribit_symbol_history(
@@ -136,13 +133,19 @@ def get_deribit_vol(symbol: str, end_date=datetime.now()) -> dict:
         return {}
 
 
-def get_coingecko_symbol(symbol: str) -> dict:
+def get_polygon_symbol(symbol: str, start_date: datetime = datetime(2020, 12, 31)) -> dict:
+    time.sleep(60/5) # max: 5 requests per second
     try:
-        api_url = coingecko_symbol_history(symbol)
+        api_url = polygon_symbol_history(symbol, start_date = start_date)
         raw = requests.get(api_url)
         data = raw.json()
-
         print(symbol, '-- Price history -- Query successful')
+
+        last_timestamp = data['results'][-1]['t']/1000
+        if last_timestamp < datetime.timestamp(datetime.now().replace(hour=0)):
+            new_start_date = datetime.fromtimestamp(last_timestamp)
+            data['results'] += get_polygon_symbol(symbol, new_start_date)['results']
+
         return data
     except BaseException:
         print(symbol, '-- Price history -- Query fail')
@@ -167,13 +170,15 @@ def save_deribit_vol(symbol: str):
         json.dump(data, raw)
 
 
-def save_coingecko_symbol(symbol: str):
-    data = get_coingecko_symbol(symbol)
-    with open(f'./data/raw/underlying/{symbols[symbol]}.json', 'w') as raw:
+def save_polygon_symbol(symbol: str):
+    data = get_polygon_symbol(symbol)
+    with open(f'./data/raw/underlying/{symbol}.json', 'w') as raw:
         json.dump(data, raw)
 
 
 def main():
+    dotenv.load_dotenv('.env')
+
     if not os.path.exists('./data/raw/symbols'):
         os.mkdir('./data/raw/symbols')
     if not os.path.exists('./data/raw/volatility'):
@@ -187,8 +192,8 @@ def main():
     save_deribit_vol('BTC')
     save_deribit_vol('ETH')
 
-    save_coingecko_symbol('bitcoin')
-    save_coingecko_symbol('ethereum')
+    save_polygon_symbol('BTC')
+    save_polygon_symbol('ETH')
 
 
 if __name__ == "__main__":
