@@ -63,7 +63,6 @@ create_underlying_data_table = """CREATE TABLE UNDERLYING_DATA (
     VOLUME FLOAT,
     VOLUME_WEIGHTED FLOAT, -- Volume weighted by average price
     TRANSACTIONS FLOAT, -- Number of transactions
-    M_CAP FLOAT,
 	VOLATILITY FLOAT,
     FOREIGN KEY(UNDERLYING_ID) REFERENCES UNDERLYING_META(ID)
 );"""
