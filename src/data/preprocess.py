@@ -8,7 +8,7 @@ import numpy as np
 import finance
 
 
-def get_underlying_data(coin: str):
+def get_underlying_data(coin: str) -> pd.DataFrame:
     """Returns useful data from underlying folder
     Returns: price, volume, volume weighted, transactions; by timestamp
     """
@@ -25,7 +25,7 @@ def get_underlying_data(coin: str):
     return pd.DataFrame(zipped, columns=['t', 'price', 'volume', 'volume_weighted', 'transaction']).set_index('t')
 
 
-def get_volatility_data(coin: str):
+def get_volatility_data(coin: str) -> pd.DataFrame:
     """Returns useful data from volatility folder
     Returns: volatility by timestamp
     """
@@ -39,7 +39,7 @@ def get_volatility_data(coin: str):
     return pd.DataFrame(zipped, columns=['t', 'volatility']).set_index('t')
 
 
-def get_contract_data(coin):
+def get_contract_data(coin: str) -> pd.DataFrame:
     """Returns useful data from symbols folder
     Returns: contract data(volume, price) by timestamp, contract
     """
@@ -78,7 +78,15 @@ def get_contract_data(coin):
     return c_df
 
 
-def compute_metrics(row):
+def save_to_csv(coin: str, underlying_df: pd.DataFrame, contract_df: pd.DataFrame):
+    """Saves unerlying and contract data to interim folder
+    Uses pd.DataFrame.to_csv"""
+    underlying_df.to_csv(f'./data/interim/{coin}_underlying_data.csv')
+    contract_df.to_csv(f'./data/interim/{coin}_contracts.csv')
+
+
+def compute_metrics(row) -> dict:
+    """Higher order function for contracts_df.apply"""
     return finance.metrics(
         K = row['strike'],
         St = row['price'],
@@ -89,12 +97,8 @@ def compute_metrics(row):
         market_price = row['close'] * row['price'])
 
 
-def save_to_csv(coin, underlying_df, contract_df):
-    underlying_df.to_csv(f'./data/interim/{coin}_underlying_data.csv')
-    contract_df.to_csv(f'./data/interim/{coin}_contracts.csv')
-
-
-def preprocess(coin):
+def preprocess(coin: str):
+    """Preprocesses raw data by coin"""
     u_df = get_underlying_data(coin)
     v_df = get_volatility_data(coin)
     c_df = get_contract_data(coin)
@@ -109,11 +113,11 @@ def preprocess(coin):
 
 
 def main():
-
     underlying_dir = os.listdir(f'./data/raw/underlying')
     coins = [*map(lambda x: x.split('.')[0], underlying_dir)]
 
     [preprocess(coin) for coin in coins]
 
 
-main()
+if __name__ == "__main__":
+    main()
