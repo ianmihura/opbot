@@ -22,12 +22,8 @@ def metrics(
         default: 'c'
     market_price : Market price of the contract
     """
-    #Check time 
-    try:
-        #convert time in days to years
-        t=t/365
-    except:
-        raise TypeError("Enter numerical value for time")
+    #convert time in days to years
+    t=t/365
     
     #1. CALCULATE OPTION BASE VALUES
     val, d1, N_d1, N_d2 = black_scholes(K, St, v, r, t, type)
@@ -56,14 +52,14 @@ def metrics(
     vega=St*np.exp(-r*t)*norm.pdf(d1)*t**0.5/100
     
     return {
-        'val': val, 
-        'val_int': val_int, 
-        'val_ext': val_ext, 
-        'd': delta,
-        'g': gamma,
-        't': theta,
-        'v': vega,
-        'r': rho,
+        'value': val, 
+        'value_int': val_int, 
+        'value_ext': val_ext, 
+        'delta': delta,
+        'gamma': gamma,
+        'theta': theta,
+        'vega': vega,
+        'rho': rho,
         'iv': iv}
 
 

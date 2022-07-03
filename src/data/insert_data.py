@@ -1,17 +1,17 @@
 from contextlib import closing
 
 
-def select(con, table: str):
+def select(con, query: str):
     """Basic select query, used to check correct insetrion
     con: sqlite3 connect object
     table: name of table to query"""
     with closing(con.cursor()) as cursor:
-        results = cursor.execute(f"SELECT * FROM {table}").fetchall()
+        results = cursor.execute(query).fetchall()
     return results
 
 
 def get_underlying_meta(con):
-    return select(con, 'UNDERLYING_META')
+    return select(con, 'SELECT * FROM UNDERLYING_META')
 
 
 def insert_many(con, query: str, data: list):
@@ -52,10 +52,10 @@ def insert_contracts_meta(con, data: list = []):
     """Inserts to CONTRACTS_META
     con: sqlite3 connect object
     data: list of contracts metadata
-        form: [ [UNDERLYING_ID, NAME, EXPIRATION, CREATION, STRIKE, IS_CALL], ...]
+        form: [ [UNDERLYING_ID, NAME, EXPIRATION, STRIKE, IS_CALL], ...]
     """
     query = """INSERT INTO CONTRACTS_META
-    (UNDERLYING_ID, NAME, EXPIRATION, CREATION, STRIKE, IS_CALL) 
+    (UNDERLYING_ID, NAME, EXPIRATION, STRIKE, IS_CALL) 
     VALUES (?, ?, ?, ?, ?, ?)"""
     insert_many(con, query, data)
 
