@@ -1,8 +1,9 @@
-from ast import Lambda
 import os
 import sqlite3
 import argparse
 import json
+import pandas as pd
+import numpy as np
 
 import time
 import datetime
@@ -11,79 +12,94 @@ import create_db
 import insert_data
 
 
-def get_underlying(coin):
-    """Get data from underlying folder"""
-    with open(f'./data/interim/underlying/{coin}.json') as json_file:
-        data = json.load(json_file)
-        timestamps = [data['prices'][i][0] for i in data['prices']]
-        prices = [data['prices'][i][1] for i in data['prices']]
-        volumes = [data['total_volumes'][i][1] for i in data['prices']]
-        market_caps = [data['market_caps'][i][1] for i in data['prices']]
-        
-    with open(f'./data/interim/volatility/{coin}.json') as json_file:
-        data = json.load(json_file)
-        volatility = [data['data'][i][4] for i in data['data']]
+def _insert_contract_data(row, con=None, contract_id=0):
+    return insert_data.insert_contracts_data(con, [
+        contract_id,
+        row['t'],
+        row['c_volume'],
+        row['open'],
+        row['close'],
+        row['high'],
+        row['low'],
+        row['value'],
+        row['value_int'],
+        row['value_ext'],
+        row['delta'],
+        row['vega'],
+        row['theta'],
+        row['gamma'],
+        row['rho'],
+        row['iv']
+    ])
 
-    return timestamps, prices, volumes, market_caps, volatility
+
+def _insert_contract_meta(row, con=None, underlying_id=0):
+    return insert_data.insert_contracts_meta(con, [
+        underlying_id,
+        row['contract'],
+        row['expiration'],
+        row['strike'],
+        row['is_call']
+    ])
 
 
-def main(args):
+def _insert_underlying_data(row, con=None, underlying_id=0):
+    return insert_data.insert_underlying_data(con, [
+        underlying_id,
+        row['t']/1000,
+        row['price'],
+        row['volume'],
+        row['volume_weighted'],
+        row['transaction'],
+        row['volatility']
+    ])
+
+
+def create_connection(db_file: str = './data/processed/datawarehouse.db'):
+    """Creates the empty db to work with: datawarehouse.db
+    Returns a connection object to the specified db"""
+    if os.path.exists(db_file):
+        os.remove(db_file)
+    return sqlite3.connect(db_file)
+
+
+def insert_underlying_data(con, underlying_id, coin):
+    underlying_data_df = pd.read_csv(f'./data/interim/{coin}_underlying_data.csv')
+    underlying_data_df = underlying_data_df.fillna(0)
+    underlying_data_df.apply(_insert_underlying_data, axis=1, con=con, underlying_id=underlying_id) 
+    insert_data.get_underlying_data(con)
+
+
+def insert_connection(con):
     """Runs db scripts to turn interim data (./data/interim)
     into clean data ready to be analyzed (./data/processed/datawarehouse.db)
     """
-    raw_folder = './data/interim'
-
-    db_file = args.where if args.where else './data/processed/datawarehouse.db'
-    if os.path.exists(db_file):
-        os.remove(db_file)
-    con = sqlite3.connect(db_file)
-
-    create_db.create(con)
-
-    underlying_dir = os.listdir(f'{raw_folder}/underlying')
-
-    underlying_meta = [*map(lambda x: (x.split('.')[0],), underlying_dir)]
+    # underlying metadata
+    raw_underlying_dir = os.listdir(f'./data/raw/underlying')
+    underlying_meta = [*map(lambda x: (x.split('.')[0],), raw_underlying_dir)]
+    coins = [u[0] for u in underlying_meta]
     insert_data.insert_underlying_meta(con, underlying_meta)
 
+    # underlying data
     underlying_meta = insert_data.get_underlying_meta(con)
-    # underlying_meta[0][0] # TODO: iterate on first index
+    underlying_ids = [u[0] for u in underlying_meta]
+    # TODO: make full array to insert, then insertmany => do one insert for each table
+    [insert_underlying_data(con, underlying_ids[i], coin) for i, coin in enumerate(coins)]
+    print(insert_data.get_underlying_data(con))
 
-    for coin in underlying_meta:
-        timestamps, prices, volumes, market_caps, volatility = get_underlying(coin[1])
-        underlying_data = list(zip()) # TODO: before zip, must verify timestamps
-
-    underlying_data = [] # UNDERLYING_ID, TIMESTAMP, PRICE, VOLUME, M_CAP, VOLATILITY
-    contracts_meta = [] # UNDERLYING_ID, NAME, EXPIRATION, CREATION, STRIKE, IS_CALL
-    contracts_data = [] # CONTRACT_ID, TIMESTAMP, VOLUME, OPEN, CLOSE, HIGH, LOW, FAIR_PRICE, INT_PRICE, EXT_PRICE, D, V, T, G, R, IV
-
-
-    with open('./data/raw/symbols/BTC.json') as json_file:
-        data = json.load(json_file)
-        # contract_name = list(data.keys())[0] # TODO: iterate on this
-        # contract_name_split = contract_name.split('-')
-        # underlying = contract_name_split[0]
-        # expiration_date = contract_name_split[1] + '-10'
-        # expiration_element = datetime.datetime.strptime(expiration_date,"%d%b%y-%H")
-        # expiration_timestamp = time.mktime(expiration_element.timetuple())
-        # strike = contract_name_split[2]
-        # is_call = contract_name_split[3] == 'C'
-
-        # volume = data['BTC-30SEP22-21000-P']['volume'][0]
-        # timestamp = data['BTC-30SEP22-21000-P']['ticks'][0]
-        # _open = data['BTC-30SEP22-21000-P']['open'][0]
-        # low = data['BTC-30SEP22-21000-P']['low'][0]
-        # high = data['BTC-30SEP22-21000-P']['high'][0]
-        # close = data['BTC-30SEP22-21000-P']['close'][0]
-        # data['BTC-22JUL22-24000-C']
+    # # contracts
+    # contract_df = pd.read_csv(f'./data/interim/{coins[0]}_contracts.csv') # TODO: iterate
+    # contract_df.apply(insert_contract_meta, axis=1, con=con, underlying_id=underlying_ids[0]) # TODO: iterate 
+    # contract_ids = insert_data.get_contracts_meta(con)
+    # contract_df.apply(insert_contract_data, axis=1, con=con, contract_id=contract_ids[0]) # TODO: iterate 
 
 
-    # insert_data.insert_underlying_data(con, underlying_data)
-    # insert_data.insert_contracts_meta(con, contracts_meta)
-    # insert_data.insert_contracts_data(con, contracts_data)
+def main():
+    con = create_connection()
+    create_db.create(con)
+
+    insert_connection(con)
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-where", type=str, help="Where the database will be created.")
-    args = parser.parse_args()
-    main(args)
+    main()

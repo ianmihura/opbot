@@ -14,6 +14,18 @@ def get_underlying_meta(con):
     return select(con, 'SELECT * FROM UNDERLYING_META')
 
 
+def get_underlying_data(con):
+    return select(con, 'SELECT * FROM UNDERLYING_DATA')
+
+
+def get_contracts_meta(con):
+    return select(con, 'SELECT * FROM CONTRACTS_META')
+
+
+def get_contracts_data(con):
+    return select(con, 'SELECT * FROM CONTRACTS_DATA')
+
+
 def insert_many(con, query: str, data: list):
     """Inserts many rows (data) using query
     con: sqlite3 connect object
@@ -43,8 +55,9 @@ def insert_underlying_data(con, data: list = []):
         form: [ [underlying_id, timestamp, price, volume, volume_w, transactions, volatility], ...]
     """
     query = """INSERT INTO UNDERLYING_DATA
-    (UNDERLYING_ID, TIMESTAMP, PRICE, VOLUME, VOLUME_W, TRANSACTIONS, VOLATILITY) 
+    (UNDERLYING_ID, TIMESTAMP, PRICE, VOLUME, VOLUME_WEIGHTED, TRANSACTIONS, VOLATILITY) 
     VALUES (?, ?, ?, ?, ?, ?, ?)"""
+    print(data)
     insert_many(con, query, data)
 
 
