@@ -1,58 +1,10 @@
 import os
 import sqlite3
-import argparse
-import json
 import pandas as pd
-import numpy as np
-
-import time
-import datetime
 
 import create_db
 import insert_data
-
-
-def _insert_contract_data(row, con=None, contract_id=0):
-    return insert_data.insert_contracts_data(con, [
-        contract_id,
-        row['t'],
-        row['c_volume'],
-        row['open'],
-        row['close'],
-        row['high'],
-        row['low'],
-        row['value'],
-        row['value_int'],
-        row['value_ext'],
-        row['delta'],
-        row['vega'],
-        row['theta'],
-        row['gamma'],
-        row['rho'],
-        row['iv']
-    ])
-
-
-def _insert_contract_meta(row, con=None, underlying_id=0):
-    return insert_data.insert_contracts_meta(con, [
-        underlying_id,
-        row['contract'],
-        row['expiration'],
-        row['strike'],
-        row['is_call']
-    ])
-
-
-def _insert_underlying_data(row, con=None, underlying_id=0):
-    return insert_data.insert_underlying_data(con, [
-        underlying_id,
-        row['t']/1000,
-        row['price'],
-        row['volume'],
-        row['volume_weighted'],
-        row['transaction'],
-        row['volatility']
-    ])
+import select_data
 
 
 def create_connection(db_file: str = './data/processed/datawarehouse.db'):
@@ -66,8 +18,58 @@ def create_connection(db_file: str = './data/processed/datawarehouse.db'):
 def insert_underlying_data(con, underlying_id, coin):
     underlying_data_df = pd.read_csv(f'./data/interim/{coin}_underlying_data.csv')
     underlying_data_df = underlying_data_df.fillna(0)
-    underlying_data_df.apply(_insert_underlying_data, axis=1, con=con, underlying_id=underlying_id) 
-    insert_data.get_underlying_data(con)
+    make_underlying_data = lambda u: [
+        underlying_id, 
+        u['t'], 
+        u['price'], 
+        u['volume'], 
+        u['volume_weighted'], 
+        u['transaction'], 
+        u['volatility']]
+    underlying_data = [make_underlying_data(row) for i, row in underlying_data_df.iterrows()]
+
+    insert_data.insert_underlying_data(con, underlying_data)
+
+
+def insert_contract_meta(con, underlying_id, coin):
+    contract_df = pd.read_csv(f'./data/interim/{coin}_contracts.csv')
+    make_contract_meta = lambda c: [
+        underlying_id,
+        c['contract'],
+        c['expiration'],
+        c['strike'],
+        c['is_call']]
+    contract_meta = [make_contract_meta(row) for i, row in contract_df.iterrows()]
+    contract_meta = list(set(tuple(sub) for sub in contract_meta))
+
+    insert_data.insert_contracts_meta(con, contract_meta)
+
+
+def insert_contract_data(con, contract_id):
+    coin = contract_id[1].split('-')[0]
+    contract_df = pd.read_csv(f'./data/interim/{coin}_contracts.csv')
+    contract_df = contract_df[contract_df['contract'] == contract_id[1]]
+
+    make_contract_data = lambda c: [
+        contract_id[0],
+        c['t'],
+        c['c_volume'],
+        c['open'],
+        c['close'],
+        c['high'],
+        c['low'],
+        c['value'],
+        c['value_int'],
+        c['value_ext'],
+        c['delta'],
+        c['vega'],
+        c['theta'],
+        c['gamma'],
+        c['rho'],
+        c['iv']]
+    contract_data = [make_contract_data(row) for i, row in contract_df.iterrows()]
+
+    insert_data.insert_contracts_data(con, contract_data)
 
 
 def insert_connection(con):
@@ -77,21 +79,18 @@ def insert_connection(con):
     # underlying metadata
     raw_underlying_dir = os.listdir(f'./data/raw/underlying')
     underlying_meta = [*map(lambda x: (x.split('.')[0],), raw_underlying_dir)]
-    coins = [u[0] for u in underlying_meta]
     insert_data.insert_underlying_meta(con, underlying_meta)
 
     # underlying data
-    underlying_meta = insert_data.get_underlying_meta(con)
-    underlying_ids = [u[0] for u in underlying_meta]
-    # TODO: make full array to insert, then insertmany => do one insert for each table
-    [insert_underlying_data(con, underlying_ids[i], coin) for i, coin in enumerate(coins)]
-    print(insert_data.get_underlying_data(con))
+    underlying_meta = select_data.get_underlying_meta(con)
+    [insert_underlying_data(con, coin[0], coin[1]) for coin in underlying_meta]
 
-    # # contracts
-    # contract_df = pd.read_csv(f'./data/interim/{coins[0]}_contracts.csv') # TODO: iterate
-    # contract_df.apply(insert_contract_meta, axis=1, con=con, underlying_id=underlying_ids[0]) # TODO: iterate 
-    # contract_ids = insert_data.get_contracts_meta(con)
-    # contract_df.apply(insert_contract_data, axis=1, con=con, contract_id=contract_ids[0]) # TODO: iterate 
+    # contracts meta
+    [insert_contract_meta(con, coin[0], coin[1]) for coin in underlying_meta]
+
+    # contracts data
+    contract_ids = select_data.get_contracts_ids(con)
+    [insert_contract_data(con, contract_id) for contract_id in contract_ids]
 
 
 def main():
