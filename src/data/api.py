@@ -36,7 +36,7 @@ def get_coingecko_symbol(symbol: str) -> dict:
     raw = requests.get(api_url)
     data = raw.json()
 
-    print(symbol, '-- Price history -- Query successful')
+    print(symbol, '-- Coingecko price history -- Query successful')
     return data
 
 
@@ -121,7 +121,7 @@ def get_polygon_symbol(symbol: str, start_date: datetime = datetime(2019, 12, 31
     raw = requests.get(api_url)
     data = raw.json()
 
-    print(symbol, start_date, '-- Price history -- Query successful')
+    print(symbol, start_date, '-- Polygon price history -- Query successful')
 
     last_timestamp = data['results'][-1]['t']/1000
     if last_timestamp < datetime.timestamp(datetime.now().replace(hour=0)):
