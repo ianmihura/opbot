@@ -3,9 +3,14 @@ import os
 import time
 import requests
 import json
-import dotenv
 import api_endpoints
 import functools
+
+
+symbols = {
+    'bitcoin': 'BTC',
+    'ethereum': 'ETH'
+}
 
 
 def safe_query(func):
@@ -58,19 +63,54 @@ def get_deribit_symbol(symbol: str) -> dict:
     return data
 
 
-# TODO: deribit ticker
+@safe_query
+def get_deribit_ticker(symbol: str) -> dict:
+    api_url = api_endpoints.deribit_ticker(symbol)
+    raw = requests.get(api_url)
+    data = raw.json()['result']
+
+    print(symbol, '-- Ticker -- Query successful')
+    return data
 
 
-# TODO: glassnode_active
+@safe_query
+def get_glassnode_active(symbol: str) -> dict:
+    api_url = api_endpoints.glassnode_active(symbol)
+    raw = requests.get(api_url)
+    data = raw.json()
+
+    print(symbol, '-- Active addresses -- Query successful')
+    return data
 
 
-# TODO: glassnode_volume
+@safe_query
+def get_glassnode_volume(symbol: str) -> dict:
+    api_url = api_endpoints.glassnode_volume(symbol)
+    raw = requests.get(api_url)
+    data = raw.json()
+
+    print(symbol, '-- Volume on-chain -- Query successful')
+    return data
 
 
-# TODO: glassnode_tx
+@safe_query
+def get_glassnode_tx(symbol: str) -> dict:
+    api_url = api_endpoints.glassnode_tx(symbol)
+    raw = requests.get(api_url)
+    data = raw.json()
+
+    print(symbol, '-- Transactions on-chain -- Query successful')
+    return data
 
 
-# TODO: glassnode_history
+@safe_query
+def get_glassnode_history(symbol: str) -> dict:
+    api_url = api_endpoints.glassnode_history(symbol)
+    raw = requests.get(api_url)
+    data = raw.json()
+
+    print(symbol, '-- Glassnode price history -- Query successful')
+    return data
 
 
 @safe_query
@@ -91,63 +131,44 @@ def get_polygon_symbol(symbol: str, start_date: datetime = datetime(2019, 12, 31
     return data
 
 
-def save_coingecko_symbol(symbol: str):
-    symbols = {
-        'bitcoin': 'BTC',
-        'ethereum': 'ETH'
-    }
-    data = get_coingecko_symbol(symbol)
-    with open(f'./data/raw/underlying/{symbols[symbol]}.json', 'w') as raw:
+def save_asset(coin: str, folder: str, data):
+    with open(f'./data/raw/{folder}/{coin}.json', 'w') as raw:
         json.dump(data, raw)
 
 
-def save_deribit_symbols(coin: str):
-    symbols = get_deribit_symbols(coin)
-    symbols = symbols[:10]  # for test
-
-    data = dict(zip(symbols, map(get_deribit_symbol, symbols)))
-
-    with open(f'./data/raw/contracts/{coin}.json', 'w') as raw:
-        json.dump(data, raw)
-
-
-# TODO: deribit ticker
-
-
-# TODO: glassnode_active
-
-
-# TODO: glassnode_volume
-
-
-# TODO: glassnode_tx
-
-
-# TODO: glassnode_history
-
-
-def save_polygon_symbol(symbol: str):
-    data = get_polygon_symbol(symbol)
-    with open(f'./data/raw/underlying/{symbol}.json', 'w') as raw:
-        json.dump(data, raw)
+def mkdir_if_exists(path):
+    if not os.path.exists(path):
+        os.mkdir(path)
 
 
 def main():
-    dotenv.load_dotenv('.env')
+    mkdir_if_exists('./data/raw/contracts')
+    mkdir_if_exists('./data/raw/contracts/data')
+    mkdir_if_exists('./data/raw/contracts/metadata')
+    mkdir_if_exists('./data/raw/underlying')
+    mkdir_if_exists('./data/raw/underlying/coingecko')
+    mkdir_if_exists('./data/raw/underlying/glassnode')
+    mkdir_if_exists('./data/raw/underlying/polygon')
+    mkdir_if_exists('./data/raw/onchain')
+    mkdir_if_exists('./data/raw/onchain/active')
+    mkdir_if_exists('./data/raw/onchain/volume')
+    mkdir_if_exists('./data/raw/onchain/tx')
 
-    if not os.path.exists('./data/raw/contracts'):
-        os.mkdir('./data/raw/contracts')
-    if not os.path.exists('./data/raw/underlying'):
-        os.mkdir('./data/raw/underlying')
+    for i in symbols:
+        coin = symbols[i]
+        
+        contracts = get_deribit_symbols(coin)
+        contracts = contracts[:10]  # for test
 
-    save_deribit_symbols('BTC')
-    save_deribit_symbols('ETH')
-
-    save_polygon_symbol('BTC')
-    save_polygon_symbol('ETH')
+        save_asset(coin, 'onchain/tx', get_glassnode_tx(coin))
+        save_asset(coin, 'onchain/volume', get_glassnode_volume(coin))
+        save_asset(coin, 'onchain/active', get_glassnode_active(coin))
+        save_asset(coin, 'contracts/metadata', dict(zip(contracts, map(get_deribit_ticker, contracts))))
+        save_asset(coin, 'contracts/data', dict(zip(contracts, map(get_deribit_symbol, contracts))))
+        save_asset(coin, 'underlying/glassnode', get_glassnode_history(coin))
+        save_asset(coin, 'underlying/coingecko', get_coingecko_symbol(i))
+        save_asset(coin, 'underlying/polygon', get_polygon_symbol(coin))
 
 
 if __name__ == "__main__":
-    # main()
-
-    print(get_coingecko_symbol('bitcoin')['total_volumes'])
+    main()

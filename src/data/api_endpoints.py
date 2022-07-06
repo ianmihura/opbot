@@ -1,6 +1,9 @@
 from datetime import datetime
 from urllib.parse import quote
 import os
+import dotenv
+
+dotenv.load_dotenv('.env')
 
 
 def coingecko_history(
