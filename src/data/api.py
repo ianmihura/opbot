@@ -59,7 +59,7 @@ def get_deribit_symbol(symbol: str) -> dict:
     raw = requests.get(api_url)
     data = raw.json()['result']
 
-    print(symbol, '-- Price history -- Query successful')
+    print(symbol, '-- Contract price history -- Query successful')
     return data
 
 
@@ -142,17 +142,17 @@ def mkdir_if_exists(path):
 
 
 def main():
-    mkdir_if_exists('./data/raw/contracts')
-    mkdir_if_exists('./data/raw/contracts/data')
-    mkdir_if_exists('./data/raw/contracts/metadata')
-    mkdir_if_exists('./data/raw/underlying')
-    mkdir_if_exists('./data/raw/underlying/coingecko')
-    mkdir_if_exists('./data/raw/underlying/glassnode')
-    mkdir_if_exists('./data/raw/underlying/polygon')
     mkdir_if_exists('./data/raw/onchain')
-    mkdir_if_exists('./data/raw/onchain/active')
-    mkdir_if_exists('./data/raw/onchain/volume')
     mkdir_if_exists('./data/raw/onchain/tx')
+    mkdir_if_exists('./data/raw/onchain/volume')
+    mkdir_if_exists('./data/raw/onchain/active')
+    mkdir_if_exists('./data/raw/contracts')
+    mkdir_if_exists('./data/raw/contracts/metadata')
+    mkdir_if_exists('./data/raw/contracts/data')
+    mkdir_if_exists('./data/raw/underlying')
+    mkdir_if_exists('./data/raw/underlying/price')
+    mkdir_if_exists('./data/raw/underlying/volume')
+    mkdir_if_exists('./data/raw/underlying/recent')
 
     for i in symbols:
         coin = symbols[i]
@@ -165,9 +165,9 @@ def main():
         save_asset(coin, 'onchain/active', get_glassnode_active(coin))
         save_asset(coin, 'contracts/metadata', dict(zip(contracts, map(get_deribit_ticker, contracts))))
         save_asset(coin, 'contracts/data', dict(zip(contracts, map(get_deribit_symbol, contracts))))
-        save_asset(coin, 'underlying/glassnode', get_glassnode_history(coin))
-        save_asset(coin, 'underlying/coingecko', get_coingecko_symbol(i))
-        save_asset(coin, 'underlying/polygon', get_polygon_symbol(coin))
+        save_asset(coin, 'underlying/price', get_glassnode_history(coin))
+        save_asset(coin, 'underlying/volume', get_coingecko_symbol(i))
+        save_asset(coin, 'underlying/recent', get_polygon_symbol(coin))
 
 
 if __name__ == "__main__":
