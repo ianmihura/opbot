@@ -16,12 +16,14 @@ def make_loss_function(gamma, **kwargs):
     return loss_Q_learning
 
 
-def find_extremes(cursor):
+def find_extremes(file):
     """This function returns the first and last date in the database."""
-    time_query = """SELECT MIN(TIMESTAMP), MAX(TIMESTAMP)
-                    FROM VARIABLE_DATA;"""
-    response = cursor.execute(time_query).fetchall()
-    return min(response), max(response)
+    time_query = """SELECT TIMESTAMP
+                    FROM CONTRACTS_DATA;"""
+    with sqlite3.connect(file) as conn:
+        cursor = conn.cursor()
+        response = cursor.execute(time_query)
+        return min(response), max(response)
 
 
 class PorfolioAgnosticAgent(pl.LightningModule):
@@ -85,13 +87,12 @@ class DataModule(pl.LightningDataModule):
     def __init__(self, file, interval_length=1, proportions = (0.8, 0.1, 0.1), **kwargs):
         super().__init__()
         assert(sum(proportions) == 1, "The proportions must sum to 1")
+
         # define the starts and ends of the partitions
-        with sqlite3.connect8(file) as conn:
-            cursor = conn.cursor()
-            self.start_train, self.end_abs = find_extremes(cursor)
-            duration = int(self.end_abs - self.start_train)
-            self.start_val = self.start_train + duration * proportions[0]
-            self.start_test = self.start_val + duration * proportions[1]
+        self.start_train, self.end_abs = find_extremes(file)
+        duration = int(self.end_abs - self.start_train)
+        self.start_val = self.start_train + duration * proportions[0]
+        self.start_test = self.start_val + duration * proportions[1]
 
         self.batch_size = 
 

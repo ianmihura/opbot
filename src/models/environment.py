@@ -7,12 +7,14 @@ import sqlite3
 import gym
 
 
-def find_extremes(cursor):
+def find_extremes(file):
     """This function returns the first and last date in the database."""
-    time_query = """SELECT MIN(TIMESTAMP), MAX(TIMESTAMP)
-                    FROM VARIABLE_DATA;"""
-    response = cursor.execute(time_query)
-    return min(response), max(response)
+    time_query = """SELECT TIMESTAMP
+                    FROM CONTRACTS_DATA;"""
+    with sqlite3.connect(file) as conn:
+        cursor = conn.cursor()
+        response = cursor.execute(time_query)
+        return min(response), max(response)
 
 
 class DeribitDataset(Dataset):
@@ -39,12 +41,12 @@ class DeribitDataset(Dataset):
         t0, t1 = self.samples[idx]
         response_iterator = self.query(t0, t1)  # TODO: decide if we need to cache this
         # convert the data in the iterator to a tensor
-        tensor_data = efficienet_way_to_iterate(response_iterator)  # TODO
-        return tensor_data
+        state_data = torch.Tensor(response_iterator.fetchall())
+        return state_data, all_data
 
     def query(self, t0, t1):
-        """This function generates an iterator object with all the data between
-        t0 and t1.
+        """This function generates an iterator object with data to build the 
+        state tath the model will see between t0 and t1.
         """
         # TODO: check the query is ok and check whether the newlines are ok
         query_text =  f"SELECT \
@@ -69,15 +71,21 @@ class DeribitDataset(Dataset):
         samples = dict()
         while current_start < self.end:
             samples[i] = (current_start, current_start + self.interval_length)
+            current_start = current_start + self.interval_length
             i += 1
+        return samples
 
-class Environment(gym.Env):
-    """gym.Env class to manage the execution of actions
+class DeribitEnv(gym.Env):
+    """gym.Env class to manage the execution of actions. This inplementation
+    works with porfolio agnostic models.
+    TODO: implement batches
     """
-    def __init__(self):
+    def __init__(self, args):
         super().__init__()
         self.action_space = gym.spaces.Discrete(6,)  # TODO: decide how the action space will be
-        self.porfolio = torch.zeros(1, 1)
+        self.porfolio = torch.zeros(args.batch_size, 1)
+        self.batch_size = args.batch_size
+        self.reward_delay = args.reward_delay
 
     def reset(self, data):
         """This function resets the state of the environment to the initial
@@ -108,7 +116,19 @@ class Environment(gym.Env):
         return self.porfolio.sum().item()
     
     def get_reward_sequence(self, sequence_of_actions) -> Tensor:
-        return Tensor([0] * len(sequence_of_actions))
+        """This function returns the reward for a sequence of actions.
+        Notes:
+        current_episode_data -> (batch, time, contracts, features)
+        sequence_of_actions: -> (batch, time, contracts)
+        """
+        time_crop_actions = sequence_of_actions[:, :-self.reward_delay]  # working with batch_first
+        time_crop_data = self.current_episode_data[:, self.reward_delay:]
+
+        porfolio = torch.mul(self.current_episode_data, sequence_of_actions.unsqueeze(-1))
+        oracle = torch.mul(time_crop_data, time_crop_actions.unsqueeze(-1))
+
+        feature_dim = 0
+        return (oracle[:, :, :, feature_dim] - porfolio[:, :, :, feature_dim]).sum(dim=-1)  # shape (batch, time)
     
     def get_gains(self) -> float:
         pass
