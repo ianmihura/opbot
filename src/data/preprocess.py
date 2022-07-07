@@ -4,7 +4,6 @@ import os
 import time
 import pandas as pd
 import numpy as np
-
 import finance
 
 
@@ -194,13 +193,14 @@ def preprocess(coin: str):
     c_df = get_contract_data(coin)
 
     underlying_df = u_price_df.join(u_volume_df)
+    underlying_df = underlying_df[~underlying_df.index.duplicated(keep='first')]
 
     # TODO: use recent data - compare
     # TODO: add on-chain tx
     # TODO: add on-chain volume
     # TODO: calculate volatility
 
-    print(len(u_volume_df))
+    underlying_df["volatility"] = finance.compute_volatility(underlying_df["u_close"])
 
     # contract_df = c_df.join(underlying_df, on='t').drop_duplicates()
     # metrics = contract_df.apply(contract_metrics, axis=1, result_type='expand')
@@ -220,5 +220,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
-    # print(get_contract_data('BTC'))
+    # main()
+    print(preprocess('BTC'))

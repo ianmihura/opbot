@@ -1,7 +1,9 @@
 # https://github.com/hashABCD/opstrat/blob/main/opstrat/blackscholes.py
 # https://github.com/yassinemaaroufi/MibianLib/blob/master/mibian/__init__.py
 import numpy as np
+import pandas as pd
 from scipy.stats import norm
+from datetime import datetime
 
 
 #TODO: volatility can be calculated from price (annualized standard deviation of log returns)
@@ -64,6 +66,18 @@ def metrics(
         'vega': vega,
         'rho': rho,
         'iv': iv}
+
+
+def compute_volatility(underlying_action: pd.Series) -> pd.Series:
+    """Computes volatility for underlying data. The series passed should be
+    indexed by time, specifically by a timestamp represented either by an int
+    or a float.
+    """
+    output_data = underlying_action.copy()
+    output_data.index = list(map(lambda x: datetime.fromtimestamp(x), output_data.index))
+    log_returns = np.log(output_data/output_data.shift())
+    volatility = log_returns.rolling('365d').std() * 24 * 365 ** 1/2  # annualized volatility
+    return volatility.fillna(0).reset_index(drop=True)
 
 
 def black_scholes(
