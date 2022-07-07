@@ -4,6 +4,9 @@ import numpy as np
 from scipy.stats import norm
 
 
+#TODO: volatility can be calculated from price (annualized standard deviation of log returns)
+
+
 def metrics(
         K: float = 60, 
         St: float = 62,
