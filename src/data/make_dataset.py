@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
 import logging
-from dotenv import find_dotenv, load_dotenv, dotenv_values
+from dotenv import find_dotenv, dotenv_values
 
 import sqlite3
 from datetime import datetime
@@ -28,7 +28,7 @@ def main(args):
     preprocess_main()
 
     # read and connect to the output filepath (destination DW)
-    con = sqlite3.connect(os.path.join(args.output_filepath, DATA_WAREHOUSE_FILE))
+    con = sqlite3.connect(os.path.join(args.output_filepath, args.DATA_WAREHOUSE_FILE))
     
     logger.info('inserting data into the destination database')
     insert_connection(con)
@@ -39,8 +39,7 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO, format=log_fmt)
 
     parser = argparse.ArgumentParser(description='Run data processing scripts to turn raw data from (../raw) into clean data ready to be analyzed (saved in ../processed).')
-    parser.add_argument('-i', '--input_filepath', help='input filepath', required=True)
-    parser.add_argument('-o', '--output_filepath', help='output filepath', required=True)
+    parser.add_argument('-o', '--output-filepath', help='output filepath', required=True)
     args = parser.parse_args()
     # add arguments from .env to the namespace 
     args = argparse.Namespace(**vars(args), **dotenv_values(find_dotenv()))
