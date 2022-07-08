@@ -6,9 +6,6 @@ from scipy.stats import norm
 from datetime import datetime
 
 
-#TODO: volatility can be calculated from price (annualized standard deviation of log returns)
-
-
 def metrics(
         K: float = 60, 
         St: float = 62,
@@ -77,6 +74,7 @@ def compute_volatility(underlying_action: pd.Series) -> pd.Series:
     output_data.index = list(map(lambda x: datetime.fromtimestamp(x), output_data.index))
     log_returns = np.log(output_data/output_data.shift())
     volatility = log_returns.rolling('365d').std() * 24 * 365 ** 1/2  # annualized volatility
+    volatility.index = list(map(datetime.timestamp, volatility.index))
     return volatility.fillna(0).reset_index(drop=True)
 
 

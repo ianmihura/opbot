@@ -7,7 +7,13 @@ import numpy as np
 import finance
 
 
-#TODO: volatility can be calculated from price (annualized standard deviation of log returns)
+def get_24h_data(data: list) -> np.ndarray:
+    return np.array([[d/24]*24 for d in data]).flatten()
+
+
+def get_24h_timestamps(timestamps: list) -> list:
+    all_timestamps = np.array([[datetime.fromtimestamp(t)]*24 for t in timestamps]).flatten()
+    return [datetime.timestamp(d.replace(hour=i%24)) for i,d in enumerate(all_timestamps)]
 
 
 def get_underlying_recent(coin: str) -> pd.DataFrame:
@@ -18,13 +24,12 @@ def get_underlying_recent(coin: str) -> pd.DataFrame:
         data = json.load(json_file)
 
         u_prices = [d['c'] for d in data['results']]
-        u_timestamps = [d['t'] for d in data['results']]
+        u_timestamps = [d['t']/1000 for d in data['results']]
         u_volumes = [d['v'] for d in data['results']]
-        u_volumes_w = [d['vw'] for d in data['results']] # volume weighted average price
         u_transactions = [d['n'] for d in data['results']] # number of transactions
 
-    zipped = list(zip(u_timestamps, u_prices, u_volumes, u_volumes_w, u_transactions))
-    return pd.DataFrame(zipped, columns=['t', 'recent_price', 'recent_volume', 'recent_volume_weighted', 'recent_transaction']).set_index('t')
+    zipped = list(zip(u_timestamps, u_prices, u_volumes, u_transactions))
+    return pd.DataFrame(zipped, columns=['t', 'recent_price', 'recent_volume', 'recent_transaction']).set_index('t')
 
 
 def get_underlying_price(coin: str) -> pd.DataFrame:
@@ -43,7 +48,6 @@ def get_underlying_price(coin: str) -> pd.DataFrame:
     zipped = list(zip(u_timestamps, u_open, u_high, u_low, u_close))
     return pd.DataFrame(zipped, columns=['t', 'u_open', 'u_high', 'u_low', 'u_close']).set_index('t')
 
-
 def get_underlying_volume(coin: str) -> pd.DataFrame:
     """Returns useful data from underlying/volume folder. Coingecko API.
     Returns: volume by timestamp (daily)
@@ -55,11 +59,10 @@ def get_underlying_volume(coin: str) -> pd.DataFrame:
         u_timestamps = [correct_time(d[0]) for d in data['total_volumes']]
         u_volumes = [d[1] for d in data['total_volumes']]
 
-    all_volumes = np.array([[v/24]*24 for v in u_volumes]).flatten()
-    all_timestamps = np.array([[datetime.fromtimestamp(t)]*24 for t in u_timestamps]).flatten()
-    all_correct_timestamps = [datetime.timestamp(d.replace(hour=i%24)) for i,d in enumerate(all_timestamps)]
+    all_volumes = get_24h_data(u_volumes)
+    all_timestamps = get_24h_timestamps(u_timestamps)
 
-    zipped = list(zip(all_correct_timestamps, all_volumes))
+    zipped = list(zip(all_timestamps, all_volumes))
     return pd.DataFrame(zipped, columns=['t', 'u_volume']).set_index('t')
 
 
@@ -73,7 +76,10 @@ def get_onchain_tx(coin: str) -> pd.DataFrame:
         u_timestamps = [d['t'] for d in data]
         u_tx = [d['v'] for d in data]
 
-    zipped = list(zip(u_timestamps, u_tx))
+    all_tx = get_24h_data(u_tx)
+    all_timestamps = get_24h_timestamps(u_timestamps)
+
+    zipped = list(zip(all_timestamps, all_tx))
     return pd.DataFrame(zipped, columns=['t', 'chain_tx']).set_index('t')
 
 
@@ -87,7 +93,10 @@ def get_onchain_volume(coin: str) -> pd.DataFrame:
         u_timestamps = [d['t'] for d in data]
         u_volumes = [d['v'] for d in data]
 
-    zipped = list(zip(u_timestamps, u_volumes))
+    all_volumes = get_24h_data(u_volumes)
+    all_timestamps = get_24h_timestamps(u_timestamps)
+
+    zipped = list(zip(all_timestamps, all_volumes))
     return pd.DataFrame(zipped, columns=['t', 'chain_volume']).set_index('t')
 
 
@@ -136,55 +145,24 @@ def get_contract_metadata(coin: str) -> pd.DataFrame:
     """
     with open(f'./data/raw/contracts/metadata/{coin}.json') as json_file:
         data = json.load(json_file)
-        # TODO
-
-    #     contracts = list(data.keys())
-    #     has_data = [bool(data[c]['ticks']) for c in contracts]
-    #     contracts = [c for i, c in enumerate(contracts) if has_data[i]]
-
-    #     c_v = [data[c]['volume'] for c in contracts]
-    #     c_t = [data[c]['ticks'] for c in contracts]
-    #     c_o = [data[c]['open'] for c in contracts]
-    #     c_l = [data[c]['low'] for c in contracts]
-    #     c_h = [data[c]['high'] for c in contracts]
-    #     c_c = [data[c]['close'] for c in contracts]
-
-    #     c_name_split = [c.split('-') for c in contracts]
-
-    #     get_timestamp = lambda d: time.mktime(datetime.strptime(d + '-10',"%d%b%y-%H").timetuple())
-    #     c_expiration = [get_timestamp(c[1]) for c in c_name_split]
-    #     c_expiration_days = [abs((datetime.fromtimestamp(exp) - datetime.now()).days) for exp in c_expiration]
-    #     c_strike = [int(c[2]) for c in c_name_split]
-    #     c_is_call = [c[3] == 'C' for c in c_name_split]
-
-    #     c_zip = lambda i: np.array(list(zip(c_t[i], c_v[i], c_o[i], c_l[i], c_h[i], c_c[i])))
-    #     c_data = [c_zip(i) for i, c in enumerate(contracts)]
-    
-    # keys_names = ['contract', 'expiration', 'expiration_days', 'strike', 'is_call']
-    # keys = list(zip(contracts, c_expiration, c_expiration_days, c_strike, c_is_call))
-
-    # columns = ['t', 'c_volume','open','low','high','close']
-    # c_dfs = [pd.DataFrame(data, columns=columns).set_index('t') for data in c_data]
-
-    # c_df = pd.concat(c_dfs, keys=keys, names=keys_names).reset_index()
-
-    # return c_df
+        # TODO save contract metadata
 
 
 def contract_metrics(row) -> dict:
     """Higher order function for contract_df.apply"""
     return finance.metrics(
         K = row['strike'],
-        St = row['price'],
-        v = row['volatility'], 
+        St = row['u_close'],
+        v = row['u_volatility'], 
         r = 0,
         t = row['expiration_days'],
         type = 'c' if row['is_call'] else 'p', 
-        market_price = row['close'] * row['price'])
+        market_price = row['c_close'] * row['u_close'])
 
 
 def preprocess(coin: str):
     """Preprocesses raw data by coin"""
+    # TODO: interploate u_volume to be similar to recet
     u_recent_df = get_underlying_recent(coin)
     u_price_df = get_underlying_price(coin)
     u_volume_df = get_underlying_volume(coin)
@@ -192,26 +170,35 @@ def preprocess(coin: str):
     chain_volume_df = get_onchain_volume(coin)
     c_df = get_contract_data(coin)
 
-    underlying_df = u_price_df.join(u_volume_df)
+    underlying_df = u_price_df.join(u_volume_df).join(chain_tx_df).join(chain_volume_df).join(u_recent_df)
     underlying_df = underlying_df[~underlying_df.index.duplicated(keep='first')]
 
-    # TODO: use recent data - compare
-    # TODO: add on-chain tx
-    # TODO: add on-chain volume
-    # TODO: calculate volatility
+    # TODO: correct volatility
+    underlying_df["u_volatility"] = finance.compute_volatility(underlying_df["u_close"])
 
-    underlying_df["volatility"] = finance.compute_volatility(underlying_df["u_close"])
-
-    # contract_df = c_df.join(underlying_df, on='t').drop_duplicates()
-    # metrics = contract_df.apply(contract_metrics, axis=1, result_type='expand')
-    # contract_df = contract_df.join(metrics)
+    contract_df = c_df.join(underlying_df, on='t').drop_duplicates()
+    metrics = contract_df.apply(contract_metrics, axis=1, result_type='expand')
+    contract_df = contract_df.join(metrics)
     
-    # underlying_df.to_csv(f'./data/interim/{coin}_underlying_data.csv')
-    # contract_df.to_csv(f'./data/interim/{coin}_contracts.csv')
+    underlying_df.to_csv(f'./data/interim/{coin}_underlying_data.csv')
+    contract_df.to_csv(f'./data/interim/{coin}_contracts.csv')
+
+
+# def visualize():
+#     import matplotlib.pyplot as plt
+#     fig, ax1 = plt.subplots()
+#     df = preprocess('BTC')
+#     x = df.index
+#     y1 = df['recent_volume'].groupby(np.arange(len(df)) // 240).sum()
+#     y2 = df['u_volume'].groupby(np.arange(len(df)) // 240).sum()
+#     ax2 = ax1.twinx()
+#     ax1.plot(y1.index, y1, 'g-')
+#     ax2.plot(y1.index, y2, 'b-')
+#     plt.show()
 
 
 def main():
-    pd.set_option('display.float_format', lambda x: '%.0f' % x)
+    pd.set_option('display.float_format', lambda x: '%.6f' % x)
     
     underlying_dir = os.listdir(f'./data/raw/underlying/price')
     coins = [*map(lambda x: x.split('.')[0], underlying_dir)]
@@ -220,5 +207,4 @@ def main():
 
 
 if __name__ == "__main__":
-    # main()
-    print(preprocess('BTC'))
+    main()

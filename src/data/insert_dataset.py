@@ -20,12 +20,18 @@ def insert_underlying_data(con, underlying_id, coin):
     underlying_data_df = underlying_data_df.fillna(0)
     make_underlying_data = lambda u: [
         underlying_id, 
-        u['t'], 
-        u['price'], 
-        u['volume'], 
-        u['volume_weighted'], 
-        u['transaction'], 
-        u['volatility']]
+        u['t'],
+        u['u_open'],
+        u['u_high'],
+        u['u_low'],
+        u['u_close'],
+        u['u_volume'],
+        u['chain_tx'],
+        u['chain_volume'],
+        u['recent_price'],
+        u['recent_volume'],
+        u['recent_transaction'],
+        u['u_volatility']]
     underlying_data = [make_underlying_data(row) for i, row in underlying_data_df.iterrows()]
 
     insert_data.insert_underlying_data(con, underlying_data)
@@ -54,10 +60,10 @@ def insert_contract_data(con, contract_id):
         contract_id[0],
         c['t'],
         c['c_volume'],
-        c['open'],
-        c['close'],
-        c['high'],
-        c['low'],
+        c['c_open'],
+        c['c_close'],
+        c['c_high'],
+        c['c_low'],
         c['value'],
         c['value_int'],
         c['value_ext'],
@@ -77,7 +83,7 @@ def insert_connection(con):
     into clean data ready to be analyzed (./data/processed/datawarehouse.db)
     """
     # underlying metadata
-    raw_underlying_dir = os.listdir(f'./data/raw/underlying')
+    raw_underlying_dir = os.listdir(f'./data/raw/underlying/price')
     underlying_meta = [*map(lambda x: (x.split('.')[0],), raw_underlying_dir)]
     insert_data.insert_underlying_meta(con, underlying_meta)
 

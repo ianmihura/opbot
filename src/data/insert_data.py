@@ -27,11 +27,11 @@ def insert_underlying_data(con, data: list = []):
     """Inserts to UNDERLYING_DATA
     con: sqlite3 connect object
     data: list of coins data
-        form: [ [underlying_id, timestamp, price, volume, volume_w, transactions, volatility], ...]
+        form: [ [UNDERLYING_ID, TIMESTAMP, OPEN, HIGH, LOW, CLOSE, VOLUME, CHAIN_TX, CHAIN_VOLUME, RECENT_PRICE, RECENT_VOLUME, RECENT_TX, VOLATILITY], ...]
     """
     query = """INSERT INTO UNDERLYING_DATA
-    (UNDERLYING_ID, TIMESTAMP, PRICE, VOLUME, VOLUME_WEIGHTED, TRANSACTIONS, VOLATILITY) 
-    VALUES (?, ?, ?, ?, ?, ?, ?)"""
+    (UNDERLYING_ID, TIMESTAMP, OPEN, HIGH, LOW, CLOSE, VOLUME, CHAIN_TX, CHAIN_VOLUME, RECENT_PRICE, RECENT_VOLUME, RECENT_TX, VOLATILITY) 
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"""
     insert_many(con, query, data)
 
 
