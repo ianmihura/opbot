@@ -70,12 +70,13 @@ def compute_volatility(underlying_action: pd.Series) -> pd.Series:
     indexed by time, specifically by a timestamp represented either by an int
     or a float.
     """
-    output_data = underlying_action.copy()
+    output_data = underlying_action.copy().fillna(0)
     output_data.index = list(map(lambda x: datetime.fromtimestamp(x), output_data.index))
     log_returns = np.log(output_data/output_data.shift())
-    volatility = log_returns.rolling('365d').std() * 24 * 365 ** 1/2  # annualized volatility
+    volatility = log_returns.rolling('30D').std() * (252 ** 1/2)
     volatility.index = list(map(datetime.timestamp, volatility.index))
-    return volatility.fillna(0).reset_index(drop=True)
+    volatility = volatility[~volatility.index.duplicated(keep='first')]
+    return volatility
 
 
 def black_scholes(

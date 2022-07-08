@@ -173,15 +173,14 @@ def preprocess(coin: str):
     underlying_df = u_price_df.join(u_volume_df).join(chain_tx_df).join(chain_volume_df).join(u_recent_df)
     underlying_df = underlying_df[~underlying_df.index.duplicated(keep='first')]
 
-    # TODO: correct volatility
-    underlying_df["u_volatility"] = finance.compute_volatility(underlying_df["u_close"])
+    underlying_df["volatility"] = finance.compute_volatility(underlying_df["u_close"])
 
     contract_df = c_df.join(underlying_df, on='t').drop_duplicates()
     metrics = contract_df.apply(contract_metrics, axis=1, result_type='expand')
     contract_df = contract_df.join(metrics)
     
-    underlying_df.to_csv(f'./data/interim/{coin}_underlying_data.csv')
-    contract_df.to_csv(f'./data/interim/{coin}_contracts.csv')
+    underlying_df.fillna(0).to_csv(f'./data/interim/{coin}_underlying_data.csv')
+    contract_df.fillna(0).to_csv(f'./data/interim/{coin}_contracts.csv')
 
 
 # def visualize():
