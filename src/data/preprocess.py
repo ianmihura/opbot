@@ -111,7 +111,7 @@ def get_contract_data(coin: str) -> pd.DataFrame:
         contracts = [c for i, c in enumerate(contracts) if has_data[i]]
 
         c_v = [data[c]['volume'] for c in contracts]
-        c_t = [data[c]['ticks'] for c in contracts]
+        c_t = [map(lambda x: x/1000, data[c]['ticks']) for c in contracts]
         c_o = [data[c]['open'] for c in contracts]
         c_l = [data[c]['low'] for c in contracts]
         c_h = [data[c]['high'] for c in contracts]
@@ -153,10 +153,10 @@ def contract_metrics(row) -> dict:
     return finance.metrics(
         K = row['strike'],
         St = row['u_close'],
-        v = row['u_volatility'], 
+        v = row['volatility'],
         r = 0,
         t = row['expiration_days'],
-        type = 'c' if row['is_call'] else 'p', 
+        type = 'c' if row['is_call'] else 'p',
         market_price = row['c_close'] * row['u_close'])
 
 
