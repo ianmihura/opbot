@@ -31,7 +31,7 @@ def insert_underlying_data(con, underlying_id, coin):
         u['recent_price'],
         u['recent_volume'],
         u['recent_transaction'],
-        u['u_volatility']]
+        u['volatility']]
     underlying_data = [make_underlying_data(row) for i, row in underlying_data_df.iterrows()]
 
     insert_data.insert_underlying_data(con, underlying_data)
