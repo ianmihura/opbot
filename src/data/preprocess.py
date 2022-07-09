@@ -23,10 +23,10 @@ def get_underlying_recent(coin: str) -> pd.DataFrame:
     with open(f'./data/raw/underlying/recent/{coin}.json') as json_file:
         data = json.load(json_file)
 
-        u_prices = [d['c'] for d in data['results']]
-        u_timestamps = [d['t']/1000 for d in data['results']]
-        u_volumes = [d['v'] for d in data['results']]
-        u_transactions = [d['n'] for d in data['results']] # number of transactions
+    u_prices = [d['c'] for d in data['results']]
+    u_timestamps = [d['t']/1000 for d in data['results']]
+    u_volumes = [d['v'] for d in data['results']]
+    u_transactions = [d['n'] for d in data['results']] # number of transactions
 
     zipped = list(zip(u_timestamps, u_prices, u_volumes, u_transactions))
     return pd.DataFrame(zipped, columns=['t', 'recent_price', 'recent_volume', 'recent_transaction']).set_index('t')
@@ -39,11 +39,11 @@ def get_underlying_price(coin: str) -> pd.DataFrame:
     with open(f'./data/raw/underlying/price/{coin}.json') as json_file:
         data = json.load(json_file)
 
-        u_timestamps = [d['t'] for d in data]
-        u_open = [d['o']['o'] for d in data]
-        u_high = [d['o']['h'] for d in data]
-        u_low = [d['o']['l'] for d in data]
-        u_close = [d['o']['c'] for d in data]
+    u_timestamps = [d['t'] for d in data]
+    u_open = [d['o']['o'] for d in data]
+    u_high = [d['o']['h'] for d in data]
+    u_low = [d['o']['l'] for d in data]
+    u_close = [d['o']['c'] for d in data]
 
     zipped = list(zip(u_timestamps, u_open, u_high, u_low, u_close))
     return pd.DataFrame(zipped, columns=['t', 'u_open', 'u_high', 'u_low', 'u_close']).set_index('t')
@@ -55,9 +55,9 @@ def get_underlying_volume(coin: str) -> pd.DataFrame:
     with open(f'./data/raw/underlying/volume/{coin}.json') as json_file:
         data = json.load(json_file)
 
-        correct_time = lambda x: datetime.fromtimestamp(x/1000).replace(hour=0).timestamp()
-        u_timestamps = [correct_time(d[0]) for d in data['total_volumes']]
-        u_volumes = [d[1] for d in data['total_volumes']]
+    correct_time = lambda x: datetime.fromtimestamp(x/1000).replace(hour=0).timestamp()
+    u_timestamps = [correct_time(d[0]) for d in data['total_volumes']]
+    u_volumes = [d[1] for d in data['total_volumes']]
 
     all_volumes = get_24h_data(u_volumes)
     all_timestamps = get_24h_timestamps(u_timestamps)
@@ -73,8 +73,8 @@ def get_onchain_tx(coin: str) -> pd.DataFrame:
     with open(f'./data/raw/onchain/tx/{coin}.json') as json_file:
         data = json.load(json_file)
 
-        u_timestamps = [d['t'] for d in data]
-        u_tx = [d['v'] for d in data]
+    u_timestamps = [d['t'] for d in data]
+    u_tx = [d['v'] for d in data]
 
     all_tx = get_24h_data(u_tx)
     all_timestamps = get_24h_timestamps(u_timestamps)
@@ -90,8 +90,8 @@ def get_onchain_volume(coin: str) -> pd.DataFrame:
     with open(f'./data/raw/onchain/volume/{coin}.json') as json_file:
         data = json.load(json_file)
 
-        u_timestamps = [d['t'] for d in data]
-        u_volumes = [d['v'] for d in data]
+    u_timestamps = [d['t'] for d in data]
+    u_volumes = [d['v'] for d in data]
 
     all_volumes = get_24h_data(u_volumes)
     all_timestamps = get_24h_timestamps(u_timestamps)
@@ -106,27 +106,27 @@ def get_contract_data(coin: str) -> pd.DataFrame:
     """
     with open(f'./data/raw/contracts/data/{coin}.json') as json_file:
         data = json.load(json_file)
-        contracts = list(data.keys())
-        has_data = [bool(data[c]['ticks']) for c in contracts]
-        contracts = [c for i, c in enumerate(contracts) if has_data[i]]
+    contracts = list(data.keys())
+    has_data = [bool(data[c]['ticks']) for c in contracts]
+    contracts = [c for i, c in enumerate(contracts) if has_data[i]]
 
-        c_v = [data[c]['volume'] for c in contracts]
-        c_t = [map(lambda x: x/1000, data[c]['ticks']) for c in contracts]
-        c_o = [data[c]['open'] for c in contracts]
-        c_l = [data[c]['low'] for c in contracts]
-        c_h = [data[c]['high'] for c in contracts]
-        c_c = [data[c]['close'] for c in contracts]
+    c_v = [data[c]['volume'] for c in contracts]
+    c_t = [map(lambda x: x/1000, data[c]['ticks']) for c in contracts]
+    c_o = [data[c]['open'] for c in contracts]
+    c_l = [data[c]['low'] for c in contracts]
+    c_h = [data[c]['high'] for c in contracts]
+    c_c = [data[c]['close'] for c in contracts]
 
-        c_name_split = [c.split('-') for c in contracts]
+    c_name_split = [c.split('-') for c in contracts]
 
-        get_timestamp = lambda d: time.mktime(datetime.strptime(d + '-10',"%d%b%y-%H").timetuple())
-        c_expiration = [get_timestamp(c[1]) for c in c_name_split]
-        c_expiration_days = [abs((datetime.fromtimestamp(exp) - datetime.now()).days) for exp in c_expiration]
-        c_strike = [int(c[2]) for c in c_name_split]
-        c_is_call = [c[3] == 'C' for c in c_name_split]
+    get_timestamp = lambda d: time.mktime(datetime.strptime(d + '-10',"%d%b%y-%H").timetuple())
+    c_expiration = [get_timestamp(c[1]) for c in c_name_split]
+    c_expiration_days = [abs((datetime.fromtimestamp(exp) - datetime.now()).days) for exp in c_expiration]
+    c_strike = [int(c[2]) for c in c_name_split]
+    c_is_call = [c[3] == 'C' for c in c_name_split]
 
-        c_zip = lambda i: list(zip(c_t[i], c_v[i], c_o[i], c_l[i], c_h[i], c_c[i]))
-        c_data = [c_zip(i) for i, c in enumerate(contracts)]
+    c_zip = lambda i: list(zip(c_t[i], c_v[i], c_o[i], c_l[i], c_h[i], c_c[i]))
+    c_data = [c_zip(i) for i, c in enumerate(contracts)]
     
     keys_names = ['contract', 'expiration', 'expiration_days', 'strike', 'is_call']
     keys = list(zip(contracts, c_expiration, c_expiration_days, c_strike, c_is_call))
@@ -145,7 +145,7 @@ def get_contract_metadata(coin: str) -> pd.DataFrame:
     """
     with open(f'./data/raw/contracts/metadata/{coin}.json') as json_file:
         data = json.load(json_file)
-        # TODO save contract metadata
+    # TODO save contract metadata
 
 
 def contract_metrics(row) -> dict:
@@ -156,7 +156,7 @@ def contract_metrics(row) -> dict:
         v = row['volatility'],
         r = 0,
         t = row['expiration_days'],
-        type = 'c' if row['is_call'] else 'p',
+        type = bool(row['is_call']),
         market_price = row['c_close'] * row['u_close'])
 
 

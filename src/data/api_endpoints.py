@@ -62,6 +62,23 @@ def deribit_all_instruments(
     return f'https://www.deribit.com/api/v2/public/get_instruments?currency={s}&expired={e}&kind={k}'
 
 
+def deribit_volatility(
+        symbol: str,
+        resolution: str = '3600',
+        start_date: datetime = datetime(2019, 12, 31),
+        end_date: datetime = datetime.now()) -> str:
+    """Volatility history.
+    Symbol example: 'BTC'
+    Resolution: int (seconds) or 1D
+    Default timestamps: Start (December 31, 2020), End (now)
+    """
+    r = quote(str(resolution))
+    s = quote(symbol)
+    start = int(start_date.timestamp() * 1000)
+    end = int(end_date.timestamp() * 1000)
+    return f'https://www.deribit.com/api/v2/public/get_volatility_index_data?currency={s}&start_timestamp={start}&end_timestamp={end}&resolution={r}'
+
+
 def glassnode_history(symbol: str) -> str:
     """Coin price history, in usd, pre 2011, amazing granularity (1h).
     Useful for price history

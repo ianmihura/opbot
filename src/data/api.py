@@ -74,6 +74,21 @@ def get_deribit_ticker(symbol: str) -> dict:
 
 
 @safe_query
+def get_deribit_volatility(symbol: str, end_date=datetime.now()) -> dict:
+    api_url = api_endpoints.deribit_volatility(symbol, end_date=end_date)
+    raw = requests.get(api_url)
+    data = raw.json()['result']
+
+    print(symbol, end_date, '-- Volatility history -- Query successful')
+
+    if data['continuation']:
+        new_end_date = datetime.fromtimestamp(data['continuation'] / 1000)
+        data['data'] += get_deribit_volatility(symbol, new_end_date)['data']
+
+    return data
+
+
+@safe_query
 def get_glassnode_active(symbol: str) -> dict:
     api_url = api_endpoints.glassnode_active(symbol)
     raw = requests.get(api_url)
@@ -153,6 +168,7 @@ def main():
     mkdir_if_exists('./data/raw/underlying/price')
     mkdir_if_exists('./data/raw/underlying/volume')
     mkdir_if_exists('./data/raw/underlying/recent')
+    mkdir_if_exists('./data/raw/underlying/dvol')
 
     for i in symbols:
         coin = symbols[i]
@@ -168,6 +184,7 @@ def main():
         save_asset(coin, 'underlying/price', get_glassnode_history(coin))
         save_asset(coin, 'underlying/volume', get_coingecko_symbol(i))
         save_asset(coin, 'underlying/recent', get_polygon_symbol(coin))
+        save_asset(coin, 'underlying/dvol', get_deribit_volatility(coin))
 
 
 if __name__ == "__main__":
