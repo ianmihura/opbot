@@ -121,15 +121,14 @@ def get_contract_data(coin: str) -> pd.DataFrame:
 
     get_timestamp = lambda d: time.mktime(datetime.strptime(d + '-10',"%d%b%y-%H").timetuple())
     c_expiration = [get_timestamp(c[1]) for c in c_name_split]
-    c_expiration_days = [abs((datetime.fromtimestamp(exp) - datetime.now()).days) for exp in c_expiration]
     c_strike = [int(c[2]) for c in c_name_split]
     c_is_call = [c[3] == 'C' for c in c_name_split]
 
     c_zip = lambda i: list(zip(c_t[i], c_v[i], c_o[i], c_l[i], c_h[i], c_c[i]))
     c_data = [c_zip(i) for i, c in enumerate(contracts)]
     
-    keys_names = ['contract', 'expiration', 'expiration_days', 'strike', 'is_call']
-    keys = list(zip(contracts, c_expiration, c_expiration_days, c_strike, c_is_call))
+    keys_names = ['contract', 'expiration', 'strike', 'is_call']
+    keys = list(zip(contracts, c_expiration, c_strike, c_is_call))
 
     columns = ['t', 'c_volume','c_open','c_low','c_high','c_close']
     c_dfs = [pd.DataFrame(data, columns=columns).set_index('t') for data in c_data]
@@ -139,25 +138,17 @@ def get_contract_data(coin: str) -> pd.DataFrame:
     return c_df
 
 
-def get_contract_metadata(coin: str) -> pd.DataFrame:
-    """Returns useful data from contracts/metadata folder
-    Returns: _
-    """
-    with open(f'./data/raw/contracts/metadata/{coin}.json') as json_file:
-        data = json.load(json_file)
-    # TODO save contract metadata
-
-
 def contract_metrics(row) -> dict:
     """Higher order function for contract_df.apply"""
     return finance.metrics(
-        K = row['strike'],
-        St = row['u_close'],
-        v = row['volatility'],
+        s = row['u_close'],
+        k = row['strike'],
         r = 0,
-        t = row['expiration_days'],
-        type = bool(row['is_call']),
-        market_price = row['c_close'] * row['u_close'])
+        T = abs(datetime.fromtimestamp(row['expiration_days']) - datetime.fromtimestamp(row['t'])).days/365, 
+        # TODO: expiration_days = [abs((datetime.fromtimestamp(exp) - datetime.fromtimestamp('t')).days)/365 for exp in c_expiration] 
+        sigma = row['volatility'],
+        p = row['c_close'] * row['u_close'],
+        is_call = bool(row['is_call']))
 
 
 def preprocess(coin: str):
@@ -181,19 +172,6 @@ def preprocess(coin: str):
     
     underlying_df.fillna(0).to_csv(f'./data/interim/{coin}_underlying_data.csv')
     contract_df.fillna(0).to_csv(f'./data/interim/{coin}_contracts.csv')
-
-
-# def visualize():
-#     import matplotlib.pyplot as plt
-#     fig, ax1 = plt.subplots()
-#     df = preprocess('BTC')
-#     x = df.index
-#     y1 = df['recent_volume'].groupby(np.arange(len(df)) // 240).sum()
-#     y2 = df['u_volume'].groupby(np.arange(len(df)) // 240).sum()
-#     ax2 = ax1.twinx()
-#     ax1.plot(y1.index, y1, 'g-')
-#     ax2.plot(y1.index, y2, 'b-')
-#     plt.show()
 
 
 def main():

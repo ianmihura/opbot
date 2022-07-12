@@ -15,7 +15,8 @@ def bench_greeks(coin):
         data = json.load(json_file)
 
     contracts = list(data.keys())
-    # contracts = [contracts[i] for i,c in enumerate(contracts) if c.split('-')[3] == 'P']
+    # contracts = [contracts[i] for i,c in enumerate(contracts) if int(c.split('-')[2]) < 50_000]
+    contracts = [contracts[i] for i,c in enumerate(contracts) if c.split('-')[3] == 'C' and int(c.split('-')[2]) < 50_000]
     c_name_split = [c.split('-') for c in contracts]
 
     get_timestamp = lambda d: time.mktime(datetime.strptime(d + '-10',"%d%b%y-%H").timetuple())
@@ -35,51 +36,55 @@ def bench_greeks(coin):
         data[c]['mark_price'] * data[c]['underlying_price']) for c in contracts], 
         columns=['contract','delta_o','gamma_o','vega_o','theta_o','rho_o','iv_o','value_o']
         ).set_index('contract')
+    
+    iv = np.array([data[c]['mark_iv'] for c in contracts])
+    price = np.array([data[c]['mark_price'] * data[c]['underlying_price'] for c in contracts])
+    plot_3d_scatter(c_expiration_days, price, iv, 'expiration','price','iv')
 
-    n_greeks = [finance.metrics(
-        data[c]['underlying_price'],
-        c_strike[i],
-        0,
-        c_expiration_days[i]/365,
-        0.739,
-        data[c]['mark_price'] * data[c]['underlying_price'] if data[c]['mark_price'] else 0.0,
-        c_is_call[i],
-    ) for i, c in enumerate(contracts)]
-    n_greeks = list(zip(contracts, n_greeks))
+    # n_greeks = [finance.metrics(
+    #     data[c]['underlying_price'],
+    #     c_strike[i],
+    #     0,
+    #     c_expiration_days[i]/365,
+    #     0.739,
+    #     data[c]['mark_price'] * data[c]['underlying_price'] if data[c]['mark_price'] else 0.0,
+    #     c_is_call[i],
+    # ) for i, c in enumerate(contracts)]
+    # n_greeks = list(zip(contracts, n_greeks))
 
-    df_greeks_n = pd.DataFrame([(
-        c[0],
-        c[1]['delta'],
-        c[1]['gamma'],
-        c[1]['vega'],
-        c[1]['theta'],
-        c[1]['rho'],
-        c[1]['iv'],
-        c[1]['value']) for c in n_greeks], 
-        columns=['contract','delta_n','gamma_n','vega_n','theta_n','rho_n','iv_n','value_n']
-        ).set_index('contract')
+    # df_greeks_n = pd.DataFrame([(
+    #     c[0],
+    #     c[1]['delta'],
+    #     c[1]['gamma'],
+    #     c[1]['vega'],
+    #     c[1]['theta'],
+    #     c[1]['rho'],
+    #     c[1]['iv'],
+    #     c[1]['value']) for c in n_greeks], 
+    #     columns=['contract','delta_n','gamma_n','vega_n','theta_n','rho_n','iv_n','value_n']
+    #     ).set_index('contract')
 
-    df_greeks = df_greeks_n.join(df_greeks_o)
+    # df_greeks = df_greeks_n.join(df_greeks_o)
 
     # df_greeks.to_csv(f'./data/interim/bench/greeks_{coin}.csv')
     # df_greeks = pd.read_csv(f'./data/interim/bench/greeks_{coin}.csv')
 
     # print(df_greeks.to_string())
 
-    df_cor = get_df_cor(df_greeks, 'delta_n', 'delta_o', 'contract')
-    print(df_cor.corr()) # 0.994038
-    df_cor = get_df_cor(df_greeks, 'gamma_n', 'gamma_o', 'contract')
-    print(df_cor.corr()) # 0.850412
-    df_cor = get_df_cor(df_greeks, 'vega_n', 'vega_o', 'contract')
-    print(df_cor.corr()) # 0.995523
-    df_cor = get_df_cor(df_greeks, 'theta_n', 'theta_o', 'contract')
-    print(df_cor.corr()) # 0.907489
-    df_cor = get_df_cor(df_greeks, 'rho_n', 'rho_o', 'contract')
-    print(df_cor.corr()) # 0.999108
-    df_cor = get_df_cor(df_greeks, 'iv_n', 'iv_o', 'contract')
-    print(df_cor.corr()) # 0.863625 (call) / 0.598525 (all)
-    df_cor = get_df_cor(df_greeks, 'value_n', 'value_o', 'contract')
-    print(df_cor.corr()) # 0.999581
+    # df_cor = get_df_cor(df_greeks, 'delta_n', 'delta_o', 'contract')
+    # print(df_cor.corr()) # 0.994038
+    # df_cor = get_df_cor(df_greeks, 'gamma_n', 'gamma_o', 'contract')
+    # print(df_cor.corr()) # 0.850412
+    # df_cor = get_df_cor(df_greeks, 'vega_n', 'vega_o', 'contract')
+    # print(df_cor.corr()) # 0.995523
+    # df_cor = get_df_cor(df_greeks, 'theta_n', 'theta_o', 'contract')
+    # print(df_cor.corr()) # 0.907489
+    # df_cor = get_df_cor(df_greeks, 'rho_n', 'rho_o', 'contract')
+    # print(df_cor.corr()) # 0.999108
+    # df_cor = get_df_cor(df_greeks, 'iv_n', 'iv_o', 'contract')
+    # print(df_cor.corr()) # 0.863625 (call) / 0.598525 (all)
+    # df_cor = get_df_cor(df_greeks, 'value_n', 'value_o', 'contract')
+    # print(df_cor.corr()) # 0.999581
 
     # print(df_greeks.to_string())
 
@@ -88,7 +93,7 @@ def bench_greeks(coin):
     # plot_same_axis(df_greeks, 'vega_n', 'vega_o')
     # plot_same_axis(df_greeks, 'theta_n', 'theta_o')
     # plot_same_axis(df_greeks, 'rho_n', 'rho_o')
-    plot_same_axis(df_greeks, 'iv_n', 'iv_o')
+    # plot_same_axis(df_greeks, 'iv_n', 'iv_o')
     # plot_same_axis(df_greeks, 'value_n', 'value_o')
 
     # plot_3d_scatter(
@@ -96,7 +101,6 @@ def bench_greeks(coin):
     #     np.array(c_strike), 
     #     np.array([data[c]['mark_iv'] for c in contracts]), 
     #     'Days to expiration', 'Strike', 'IV')
-
 
 
 def get_df_cor(df, col1, col2, i):
@@ -123,7 +127,7 @@ def bench_volatility(coin):
 
 
 def bench_greek_model():
-    s = np.array([range(10,70,1) for i in range(23)])
+    s = np.array([range(10,70,1) for i in range(23)]) # shape = (23, 60)
     I = np.ones((np.shape(s)))
     time = np.arange(1,12.5,0.5)/12
     T = np.array([ele for ele in time for i in range(np.shape(s)[1])]).reshape(np.shape(s))
@@ -138,25 +142,35 @@ def bench_greek_model():
                 T[i,j],
                 0.5*I[i,j],
                 0.5*I[i,j],
-                True
+                False
             ))
     
-    # delta = [x.delta() for x in contracts]
+    # delta = [x['delta'] for x in contracts]
     # delta = np.array(delta).reshape(np.shape(s))
 
-    # gamma = [x.gamma() for x in contracts]
+    # gamma = [x['gamma'] for x in contracts]
     # gamma = np.array(gamma).reshape(np.shape(s))
 
-    theta = [x.theta() for x in contracts]
-    theta = np.array(theta).reshape(np.shape(s))
+    # theta = [x['theta'] for x in contracts]
+    # theta = np.array(theta).reshape(np.shape(s))
 
-    # vega = [x.vega() for x in contracts]
+    # vega = [x['vega'] for x in contracts]
     # vega = np.array(vega).reshape(np.shape(s))
 
-    # rho = [x.rho() for x in contracts]
+    # rho = [x['rho'] for x in contracts]
     # rho = np.array(rho).reshape(np.shape(s))
 
-    plot_3d_surface(s, T, theta, zlabel='Greek')
+    iv = [x['iv_bi'] for x in contracts]
+    iv = np.array(iv).reshape(np.shape(s))
+    plot_3d_surface(s, T, iv, zlabel='iv_bi')
+
+    # iv = [x['iv_rn'] for x in contracts]
+    # iv = np.nan_to_num(np.array(iv).reshape(np.shape(s)))
+    # plot_3d_surface(s, T, iv, zlabel='iv_rn')
+
+    # iv = [x['iv_bi'] for x in contracts]
+    # iv = np.array(iv).reshape(np.shape(s))
+    # plot_3d_surface(s, T, iv, zlabel='iv_bi')
 
 
 def bench_iv(coin):
