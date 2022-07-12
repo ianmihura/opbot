@@ -15,12 +15,12 @@ def bench_greeks(coin):
         data = json.load(json_file)
 
     contracts = list(data.keys())
-    contracts = [contracts[i] for i,c in enumerate(contracts) if c.split('-')[3] == 'C']
+    # contracts = [contracts[i] for i,c in enumerate(contracts) if c.split('-')[3] == 'P']
     c_name_split = [c.split('-') for c in contracts]
 
     get_timestamp = lambda d: time.mktime(datetime.strptime(d + '-10',"%d%b%y-%H").timetuple())
     c_expiration = [get_timestamp(c[1]) for c in c_name_split]
-    c_expiration_days = [abs((datetime.fromtimestamp(exp) - datetime.now()).days) for exp in c_expiration]
+    c_expiration_days = [abs((datetime.fromtimestamp(exp) - datetime.now()).days)+1+3 for exp in c_expiration]
     c_strike = [int(c[2]) for c in c_name_split]
     c_is_call = [c[3] == 'C' for c in c_name_split]
 
@@ -31,8 +31,9 @@ def bench_greeks(coin):
         data[c]['greeks']['vega'], 
         data[c]['greeks']['theta'], 
         data[c]['greeks']['rho'], 
-        data[c]['mark_iv']/100) for c in contracts], 
-        columns=['contract','delta_o','gamma_o','vega_o','theta_o','rho_o','iv_o']
+        data[c]['mark_iv']/100,
+        data[c]['mark_price'] * data[c]['underlying_price']) for c in contracts], 
+        columns=['contract','delta_o','gamma_o','vega_o','theta_o','rho_o','iv_o','value_o']
         ).set_index('contract')
 
     n_greeks = [finance.metrics(
@@ -41,13 +42,11 @@ def bench_greeks(coin):
         0,
         c_expiration_days[i]/365,
         0.739,
-        data[c]['mark_price'] * data[c]['underlying_price'] if data[c]['mark_price'] 
-            else data[c]['last_price'] * data[c]['underlying_price'],
-        0,
+        data[c]['mark_price'] * data[c]['underlying_price'] if data[c]['mark_price'] else 0.0,
         c_is_call[i],
     ) for i, c in enumerate(contracts)]
     n_greeks = list(zip(contracts, n_greeks))
-    
+
     df_greeks_n = pd.DataFrame([(
         c[0],
         c[1]['delta'],
@@ -55,8 +54,9 @@ def bench_greeks(coin):
         c[1]['vega'],
         c[1]['theta'],
         c[1]['rho'],
-        c[1]['iv']) for c in n_greeks], 
-        columns=['contract','delta_n','gamma_n','vega_n','theta_n','rho_n','iv_n']
+        c[1]['iv'],
+        c[1]['value']) for c in n_greeks], 
+        columns=['contract','delta_n','gamma_n','vega_n','theta_n','rho_n','iv_n','value_n']
         ).set_index('contract')
 
     df_greeks = df_greeks_n.join(df_greeks_o)
@@ -65,13 +65,6 @@ def bench_greeks(coin):
     # df_greeks = pd.read_csv(f'./data/interim/bench/greeks_{coin}.csv')
 
     # print(df_greeks.to_string())
-
-    # plot_same_axis(df_greeks, 'delta_n', 'delta_o')
-    # plot_same_axis(df_greeks, 'gamma_n', 'gamma_o')
-    # plot_same_axis(df_greeks, 'vega_n', 'vega_o')
-    # plot_same_axis(df_greeks, 'theta_n', 'theta_o')
-    # plot_same_axis(df_greeks, 'rho_n', 'rho_o')
-    # plot_same_axis(df_greeks, 'iv_n', 'iv_o')
 
     df_cor = get_df_cor(df_greeks, 'delta_n', 'delta_o', 'contract')
     print(df_cor.corr()) # 0.994038
@@ -84,7 +77,26 @@ def bench_greeks(coin):
     df_cor = get_df_cor(df_greeks, 'rho_n', 'rho_o', 'contract')
     print(df_cor.corr()) # 0.999108
     df_cor = get_df_cor(df_greeks, 'iv_n', 'iv_o', 'contract')
-    print(df_cor.corr()) # 0.863625
+    print(df_cor.corr()) # 0.863625 (call) / 0.598525 (all)
+    df_cor = get_df_cor(df_greeks, 'value_n', 'value_o', 'contract')
+    print(df_cor.corr()) # 0.999581
+
+    # print(df_greeks.to_string())
+
+    # plot_same_axis(df_greeks, 'delta_n', 'delta_o')
+    # plot_same_axis(df_greeks, 'gamma_n', 'gamma_o')
+    # plot_same_axis(df_greeks, 'vega_n', 'vega_o')
+    # plot_same_axis(df_greeks, 'theta_n', 'theta_o')
+    # plot_same_axis(df_greeks, 'rho_n', 'rho_o')
+    plot_same_axis(df_greeks, 'iv_n', 'iv_o')
+    # plot_same_axis(df_greeks, 'value_n', 'value_o')
+
+    # plot_3d_scatter(
+    #     np.array(c_expiration_days), 
+    #     np.array(c_strike), 
+    #     np.array([data[c]['mark_iv'] for c in contracts]), 
+    #     'Days to expiration', 'Strike', 'IV')
+
 
 
 def get_df_cor(df, col1, col2, i):
@@ -119,7 +131,15 @@ def bench_greek_model():
     contracts = []
     for i in range(np.shape(s)[0]):
         for j in range(np.shape(s)[1]):
-            contracts.append(finance.BsmModel('c',s[i,j],40*I[i,j],0.1*I[i,j], T[i,j],0.5*I[i,j]))
+            contracts.append(finance.metrics(
+                s[i,j],
+                40*I[i,j],
+                0.1*I[i,j],
+                T[i,j],
+                0.5*I[i,j],
+                0.5*I[i,j],
+                True
+            ))
     
     # delta = [x.delta() for x in contracts]
     # delta = np.array(delta).reshape(np.shape(s))
@@ -136,7 +156,7 @@ def bench_greek_model():
     # rho = [x.rho() for x in contracts]
     # rho = np.array(rho).reshape(np.shape(s))
 
-    plot_3d_greeks(s, T, theta, zlabel='Greek')
+    plot_3d_surface(s, T, theta, zlabel='Greek')
 
 
 def bench_iv(coin):
@@ -208,7 +228,7 @@ def plot_candles(df):
     plt.show()
 
 
-def plot_3d_greeks(x, y, z, xlabel='Stock price', ylabel='Time to Expiration', zlabel=''):
+def plot_3d_surface(x, y, z, xlabel='Stock price', ylabel='Time to Expiration', zlabel=''):
     norm = matplotlib.colors.Normalize()
     fig = plt.figure(figsize=(20,11))
     ax = fig.add_subplot(111, projection='3d')
@@ -225,10 +245,29 @@ def plot_3d_greeks(x, y, z, xlabel='Stock price', ylabel='Time to Expiration', z
     plt.show()
 
 
+def plot_3d_scatter(x, y, z, xlabel='Stock price', ylabel='Time to Expiration', zlabel=''):
+    norm = matplotlib.colors.Normalize()
+    fig = plt.figure(figsize=(20,11))
+    ax = fig.add_subplot(111, projection='3d')
+    ax.view_init(12,320)
+    # ax.plot_trisurf(x, y, z, linewidth=0.2, antialiased=True, cmap='jet')
+    ax.scatter(x, y, z, linewidth=0.2, antialiased=True, cmap='jet')
+    ax.set_zlim3d(z.min(), z.max())
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.set_zlabel(zlabel)
+    m = matplotlib.cm.ScalarMappable(cmap=matplotlib.cm.jet)
+    m.set_array(z)
+    cbar = plt.colorbar(m)
+    plt.show()
+
+
 def main():
-    # bench_greeks('BTC')
+    pd.set_option('display.float_format', lambda x: '%.6f' % x)
+
+    bench_greeks('BTC')
     # bench_volatility('BTC')
-    bench_greek_model()
+    # bench_greek_model()
 
     # bench_iv('BTC')
 

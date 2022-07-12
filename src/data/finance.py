@@ -1,5 +1,6 @@
 # https://github.com/hashABCD/opstrat/blob/main/opstrat/blackscholes.py
 # https://github.com/yassinemaaroufi/MibianLib/blob/master/mibian/__init__.py
+# https://www.quantconnect.com/tutorials/introduction-to-options/the-greek-letters
 import numpy as np
 import pandas as pd
 from scipy.stats import norm
@@ -7,103 +8,99 @@ from datetime import datetime
 from math import log, sqrt, exp
 
 
-def get_d1(s, k, r, T, sigma, q=0):
+def get_d1(s, k, r, T, sigma):
     """d1 term for the Black-Scholes Model
     s: Underlying asset price
     k: Option strike
     r: Continuous risk-free rate
     T: Time to expiry in years (days / 365)
     sigma: Underlying volatility
-    q: Dividend continuous rate
     """
-    return (log(s / k) + (r - q + sigma ** 2 * 0.5) * T) / (sigma * sqrt(T))
+    return (log(s / k) + (r + sigma ** 2 * 0.5) * T) / (sigma * sqrt(T))
 
-def get_d2(s, k, r, T, sigma, q=0):
+
+def get_d2(s, k, r, T, sigma):
     """d2 term for the Black-Scholes Model
     s: Underlying asset price
     k: Option strike
     r: Continuous risk-free rate
     T: Time to expiry in years (days / 365)
     sigma: Underlying volatility
-    q: Dividend continuous rate
     """
-    return (log(s / k) + (r - q - sigma ** 2 * 0.5) * T) / (sigma * sqrt(T))
+    return (log(s / k) + (r - sigma ** 2 * 0.5) * T) / (sigma * sqrt(T))
 
-def bsm_price(s, k, r, T, sigma, q=0, is_call=True):
+
+def bsm_price(s, k, r, T, sigma, is_call=True):
     """Black-Scholes Model - Fair price calculation
     s: Underlying asset price
     k: Option strike
     r: Continuous risk-free rate
     T: Time to expiry in years (days / 365)
     sigma: Underlying volatility
-    q: Dividend continuous rate
     is_call: Contract is call (False is a put)
     """
     sigma = sigma if sigma else sigma
     d1 = get_d1(s, k, r, T, sigma)
     d2 = d1 - sigma * sqrt(T)
     if is_call:
-        return exp(-r*T) * (s * exp((r - q)*T) * norm.cdf(d1) - k * norm.cdf(d2))
+        return exp(-r*T) * (s * exp((r)*T) * norm.cdf(d1) - k * norm.cdf(d2))
     else:
-        return exp(-r*T) * (k * norm.cdf(-d2) - (s * exp((r - q)*T) * norm.cdf(-d1)))
+        return exp(-r*T) * (k * norm.cdf(-d2) - (s * exp((r)*T) * norm.cdf(-d1)))
 
-def delta(s, k, r, T, sigma, q=0, is_call=True):
+
+def delta(s, k, r, T, sigma,is_call=True):
     """Delta variable for the Black-Scholes Model
     s: Underlying asset price
     k: Option strike
     r: Continuous risk-free rate
     T: Time to expiry in years (days / 365)
     sigma: Underlying volatility
-    q: Dividend continuous rate
     is_call: Contract is call (False is a put)
     """
     if is_call:
-        return exp(-q * T) * norm.cdf(get_d1(s, k, r, T, sigma))
+        return norm.cdf(get_d1(s, k, r, T, sigma))
     else:
-        return exp(-q * T) * (norm.cdf(get_d1(s, k, r, T, sigma))-1)
+        return norm.cdf(get_d1(s, k, r, T, sigma)) - 1
 
-def gamma(s, k, r, T, sigma, q=0):
+
+def gamma(s, k, r, T, sigma):
     """Gamma variable for the Black-Scholes Model
     s: Underlying asset price
     k: Option strike
     r: Continuous risk-free rate
     T: Time to expiry in years (days / 365)
     sigma: Underlying volatility
-    q: Dividend continuous rate
     """
-    return norm.pdf(get_d1(s, k, r, T, sigma)) * exp(-q * T) / (s * sigma * sqrt(T))
+    return norm.pdf(get_d1(s, k, r, T, sigma)) / (s * sigma * sqrt(T))
 
-def vega(s, k, r, T, sigma, q=0):
+
+def vega(s, k, r, T, sigma):
     """Vega variable for the Black-Scholes Model
     s: Underlying asset price
     k: Option strike
     r: Continuous risk-free rate
     T: Time to expiry in years (days / 365)
     sigma: Underlying volatility
-    q: Dividend continuous rate
     """
-    return s * sqrt(T) * norm.pdf(get_d1(s, k, r, T, sigma)) * exp(-q * T) / 100
+    return s * sqrt(T) * norm.pdf(get_d1(s, k, r, T, sigma)) / 100
 
-def theta(s, k, r, T, sigma, q=0, is_call=True):
+
+def theta(s, k, r, T, sigma, is_call=True):
     """Theta variable for the Black-Scholes Model
     s: Underlying asset price
     k: Option strike
     r: Continuous risk-free rate
     T: Time to expiry in years (days / 365)
     sigma: Underlying volatility
-    q: Dividend continuous rate
     is_call: Contract is call (False is a put)
     """
     d1 = get_d1(s, k, r, T, sigma)
     d2 = d1 - sigma * sqrt(T)
     if is_call:
-        return -s * norm.pdf(d1) * sigma * exp(-q*T) / (2 * sqrt(T)) \
-                    + q * s * norm.cdf(d1) * exp(-q*T) \
-                    - r * k * exp(-r*T) * norm.cdf(d2) / 365
+        return -s * norm.pdf(d1) * sigma / (2 * sqrt(T)) - r * k * exp(-r*T) * norm.cdf(d2) / 365
     else:
-        return -s * norm.pdf(d1) * sigma * exp(-q * T) / (2 * sqrt(T)) \
-                    - q * s * norm.cdf(-d1) * exp(-q * T) \
-                    + r * k * exp(-r * T) * norm.cdf(-d2) / 365
+        return -s * norm.pdf(d1) * sigma / (2 * sqrt(T)) + r * k * exp(-r * T) * norm.cdf(-d2) / 365
+
 
 def rho(s, k, r, T, sigma, is_call=True):
     """Rho variable for the Black-Scholes Model
@@ -118,6 +115,7 @@ def rho(s, k, r, T, sigma, is_call=True):
         return k * T * (exp(-r*T)) * norm.cdf(get_d2(s, k, r, T, sigma)) / 100
     else:
         return -k * T * (exp(-r*T)) * norm.cdf(-get_d2(s, k, r, T, sigma)) / 100
+
 
 def iv(s, k, r, T, p, is_call=True):
     """Implied volatility (Black-Scholes price) - bisection method
@@ -139,9 +137,9 @@ def iv(s, k, r, T, p, is_call=True):
     while 1:
         iteration +=1
         mid_vol = (upper_vol + lower_vol)/2.0
-        price = bsm_price(s, k, r, T, mid_vol)
+        price = bsm_price(s, k, r, T, mid_vol, is_call)
         if is_call:
-            lower_price = bsm_price(s, k, r, T, lower_vol)
+            lower_price = bsm_price(s, k, r, T, lower_vol, is_call)
             
             if (lower_price - p) * (price - p) > 0:
                 lower_vol = mid_vol
@@ -149,11 +147,11 @@ def iv(s, k, r, T, p, is_call=True):
                 upper_vol = mid_vol
             if abs(price - p) < precision: break 
             if mid_vol > max_vol - 5 :
-                mid_vol = 0.000001
+                mid_vol = min_vol
                 break
 
         else:
-            upper_price = bsm_price(s, k, r, T, upper_vol)
+            upper_price = bsm_price(s, k, r, T, upper_vol, is_call)
 
             if (upper_price - p) * (price - p) > 0:
                 upper_vol = mid_vol
@@ -161,17 +159,31 @@ def iv(s, k, r, T, p, is_call=True):
                 lower_vol = mid_vol
             if abs(price - p) < precision: break 
             if iteration > 50: break
+            if mid_vol < min_vol:
+                mid_vol = min_vol
+                break
 
     return mid_vol
 
-def metrics(s, k, r, T, sigma, p, q=0, is_call=True):
+
+def metrics(s, k, r, T, sigma, p, is_call=True):
+    """Implied volatility (Black-Scholes price) - bisection method
+    s: Underlying asset price
+    k: Option strike
+    r: Continuous risk-free rate
+    T: Time to expiry in years (days / 365)
+    sigma: Underlying volatility
+    p: Contract price in the open market
+    is_call: Contract is call (False is a put)
+    """
     return {
-        'delta': delta(s, k, r, T, sigma, q, is_call),
-        'gamma': gamma(s, k, r, T, sigma, q),
-        'vega': vega(s, k, r, T, sigma, q),
-        'theta': theta(s, k, r, T, sigma, q, is_call),
+        'delta': delta(s, k, r, T, sigma, is_call),
+        'gamma': gamma(s, k, r, T, sigma),
+        'vega': vega(s, k, r, T, sigma),
+        'theta': theta(s, k, r, T, sigma, is_call),
         'rho': rho(s, k, r, T, sigma, is_call),
         'iv': iv(s, k, r, T, p, is_call),
+        'value': bsm_price(s, k, r, T, sigma, is_call)
     }
 
 
@@ -319,18 +331,18 @@ def metrics(s, k, r, T, sigma, p, q=0, is_call=True):
 #         'iv': iv}
 
 
-# def compute_volatility(underlying_action: pd.Series) -> pd.Series:
-#     """Computes volatility for underlying data. The series passed should be
-#     indexed by time, specifically by a timestamp represented either by an int
-#     or a float.
-#     """
-#     output_data = underlying_action.copy().fillna(0)
-#     output_data.index = list(map(lambda x: datetime.fromtimestamp(x), output_data.index))
-#     log_returns = np.log(output_data/output_data.shift())
-#     volatility = log_returns.rolling('30D').std() * (252 ** 1/2)
-#     volatility.index = list(map(datetime.timestamp, volatility.index))
-#     volatility = volatility[~volatility.index.duplicated(keep='first')]
-#     return volatility
+def volatility(underlying: pd.Series) -> pd.Series:
+    """Computes volatility for underlying data. The series passed should be
+    indexed by time, specifically by a timestamp represented either by an int
+    or a float.
+    """
+    output_data = underlying.copy().fillna(0)
+    output_data.index = list(map(lambda x: datetime.fromtimestamp(x), output_data.index))
+    log_returns = np.log(output_data/output_data.shift())
+    volatility = log_returns.rolling('30D').std() * (252 ** 1/2)
+    volatility.index = list(map(datetime.timestamp, volatility.index))
+    volatility = volatility[~volatility.index.duplicated(keep='first')]
+    return volatility
 
 
 # def black_scholes(
