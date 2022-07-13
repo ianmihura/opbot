@@ -178,14 +178,14 @@ def metrics(s, k, r, T, sigma, p, is_call=True):
     is_call: Contract is call (False is a put)
     """
     return {
-        # 'delta': delta(s, k, r, T, sigma, is_call),
-        # 'gamma': gamma(s, k, r, T, sigma),
-        # 'vega': vega(s, k, r, T, sigma),
-        # 'theta': theta(s, k, r, T, sigma, is_call),
-        # 'rho': rho(s, k, r, T, sigma, is_call),
+        'delta': delta(s, k, r, T, sigma, is_call),
+        'gamma': gamma(s, k, r, T, sigma),
+        'vega': vega(s, k, r, T, sigma),
+        'theta': theta(s, k, r, T, sigma, is_call),
+        'rho': rho(s, k, r, T, sigma, is_call),
         # 'iv_rn': implied_volatility(s, k, r, T, p, is_call),
-        'iv_bi': iv(s, k, r, T, p, is_call),
-        # 'value': bsm_price(s, k, r, T, sigma, is_call),
+        'iv': iv(s, k, r, T, p, is_call),
+        'value': bsm_price(s, k, r, T, sigma, is_call),
     }
 
 

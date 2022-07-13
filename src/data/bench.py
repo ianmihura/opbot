@@ -116,7 +116,7 @@ def bench_volatility(coin):
     df_dvol = df_dvol.set_index('t')
 
     df_price = preprocess.get_underlying_price(coin)
-    df_price["volatility"] = finance.compute_volatility(df_price["u_close"])
+    df_price["volatility"] = finance.volatility(df_price["u_close"])
     df_price['volatility'] = df_price['volatility'].apply(lambda x: x*100)
 
     df = df_price.join(df_dvol)
