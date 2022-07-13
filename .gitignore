@@ -87,3 +87,7 @@ target/
 
 # Mypy cache
 .mypy_cache/
+
+# PyTorch checkpoints and deployed models (torch script)
+*.ckpt
+*.pt
