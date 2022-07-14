@@ -26,7 +26,7 @@ def get_underlying_recent(coin: str) -> pd.DataFrame:
     u_prices = [d['c'] for d in data['results']]
     u_timestamps = [d['t']/1000 for d in data['results']]
     u_volumes = [d['v'] for d in data['results']]
-    u_transactions = [d['n'] for d in data['results']] # number of transactions
+    u_transactions = [d['n'] for d in data['results']]
 
     zipped = list(zip(u_timestamps, u_prices, u_volumes, u_transactions))
     return pd.DataFrame(zipped, columns=['t', 'recent_price', 'recent_volume', 'recent_transaction']).set_index('t')
@@ -144,8 +144,7 @@ def contract_metrics(row) -> dict:
         s = row['u_close'],
         k = row['strike'],
         r = 0,
-        T = abs(datetime.fromtimestamp(row['expiration_days']) - datetime.fromtimestamp(row['t'])).days/365, 
-        # TODO: expiration_days = [abs((datetime.fromtimestamp(exp) - datetime.fromtimestamp('t')).days)/365 for exp in c_expiration] 
+        T = (abs((datetime.fromtimestamp(row['expiration']) - datetime.fromtimestamp(row.name)).days)+1) / 365, 
         sigma = row['volatility'],
         p = row['c_close'] * row['u_close'],
         is_call = bool(row['is_call']))
@@ -164,12 +163,15 @@ def preprocess(coin: str):
     underlying_df = u_price_df.join(u_volume_df).join(chain_tx_df).join(chain_volume_df).join(u_recent_df)
     underlying_df = underlying_df[~underlying_df.index.duplicated(keep='first')]
 
-    underlying_df["volatility"] = finance.compute_volatility(underlying_df["u_close"])
+    print('calculating volatility')
+    underlying_df["volatility"] = finance.volatility(underlying_df["u_close"])
 
     contract_df = c_df.join(underlying_df, on='t').drop_duplicates()
+    print('calculating greeks')
     metrics = contract_df.apply(contract_metrics, axis=1, result_type='expand')
     contract_df = contract_df.join(metrics)
     
+    print('saving to file')
     underlying_df.fillna(0).to_csv(f'./data/interim/{coin}_underlying_data.csv')
     contract_df.fillna(0).to_csv(f'./data/interim/{coin}_contracts.csv')
 
