@@ -1,0 +1,14 @@
+{
+    "model": "deepar",
+
+    "gpus": 0,
+
+    "train_size": 0.75,
+
+    "max_epochs": 10,
+    "patience": 3,
+    "batch_size": 32,
+    "learning_rate": 0.001,
+
+    "checkpoint_file": "...",
+}
