@@ -29,6 +29,11 @@ requirements: test_environment
 data: requirements
 	$(PYTHON_INTERPRETER) src/data/make_dataset.py -o data/processed
 
+
+pretrain:
+	$(PYTHON_INTERPRETER) src/time_series/pre_train.py -conf src/time_series/configs/nbeats.json
+
+
 ## Delete all compiled Python files
 clean:
 	find . -type f -name "*.py[co]" -delete
