@@ -36,8 +36,6 @@ create_contracts_data_table = """CREATE TABLE CONTRACTS_DATA (
     HIGH FLOAT,
     LOW FLOAT,
     FAIR_PRICE FLOAT,
-    INT_PRICE FLOAT,
-    EXT_PRICE FLOAT,
     D FLOAT,
 	V FLOAT,
 	T FLOAT,

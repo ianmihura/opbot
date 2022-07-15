@@ -65,8 +65,6 @@ def insert_contract_data(con, contract_id):
         c['c_high'],
         c['c_low'],
         c['value'],
-        c['value_int'],
-        c['value_ext'],
         c['delta'],
         c['vega'],
         c['theta'],
@@ -85,17 +83,21 @@ def insert_connection(con):
     # underlying metadata
     raw_underlying_dir = os.listdir(f'./data/raw/underlying/price')
     underlying_meta = [*map(lambda x: (x.split('.')[0],), raw_underlying_dir)]
+    print('Insert -- underlying metadata')
     insert_data.insert_underlying_meta(con, underlying_meta)
 
     # underlying data
     underlying_meta = select_data.get_underlying_meta(con)
+    print('Insert -- underlying data')
     [insert_underlying_data(con, coin[0], coin[1]) for coin in underlying_meta]
 
     # contracts meta
+    print('Insert -- contract metadata')
     [insert_contract_meta(con, coin[0], coin[1]) for coin in underlying_meta]
 
     # contracts data
     contract_ids = select_data.get_contracts_ids(con)
+    print('Insert -- contract data')
     [insert_contract_data(con, contract_id) for contract_id in contract_ids]
 
 

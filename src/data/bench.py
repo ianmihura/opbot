@@ -191,7 +191,6 @@ def bench_iv(coin):
     # plot_3d_greeks(c_strike, c_expiration_days, iv, zlabel='Greek')
 
 
-
 def plot_dif_axis(df, col1, col2):
     fig, ax1 = plt.subplots()
     x = df.index

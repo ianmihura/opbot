@@ -5,6 +5,11 @@ import time
 import pandas as pd
 import numpy as np
 import finance
+from tqdm import tqdm
+
+
+# TODO: add DVOL to underlying
+# TODO: interploate u_volume to be similar to recet
 
 
 def get_24h_data(data: list) -> np.ndarray:
@@ -152,7 +157,6 @@ def contract_metrics(row) -> dict:
 
 def preprocess(coin: str):
     """Preprocesses raw data by coin"""
-    # TODO: interploate u_volume to be similar to recet
     u_recent_df = get_underlying_recent(coin)
     u_price_df = get_underlying_price(coin)
     u_volume_df = get_underlying_volume(coin)
@@ -163,15 +167,27 @@ def preprocess(coin: str):
     underlying_df = u_price_df.join(u_volume_df).join(chain_tx_df).join(chain_volume_df).join(u_recent_df)
     underlying_df = underlying_df[~underlying_df.index.duplicated(keep='first')]
 
-    print('calculating volatility')
+    print(f'{coin} -- Preprocess -- calculating volatility')
     underlying_df["volatility"] = finance.volatility(underlying_df["u_close"])
-
     contract_df = c_df.join(underlying_df, on='t').drop_duplicates()
-    print('calculating greeks')
-    metrics = contract_df.apply(contract_metrics, axis=1, result_type='expand')
+
+    print(f'{coin} -- Preprocess -- calculating greeks')
+    tqdm.pandas()
+    metrics = contract_df.progress_apply(contract_metrics, axis=1, result_type='expand')
     contract_df = contract_df.join(metrics)
-    
-    print('saving to file')
+
+    print(f'{coin} -- Preprocess -- all calculations done')
+    contract_df = contract_df.drop(columns=[
+        'recent_price',
+        'recent_volume',
+        'recent_transaction',
+        'u_open',
+        'u_high',
+        'u_low',
+        'u_close',
+        'u_volume',
+        'chain_volume',
+        'chain_tx'])
     underlying_df.fillna(0).to_csv(f'./data/interim/{coin}_underlying_data.csv')
     contract_df.fillna(0).to_csv(f'./data/interim/{coin}_contracts.csv')
 
