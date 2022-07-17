@@ -26,18 +26,19 @@ def main(args):
             end = datetime.now()
             # request, transform and load data to DW
             logger.info(f'requesting data from api')
-            api_main(start, end)  # TODO: add parameters to api_main
+            api_main(start, end)
 
             logger.info('preprocessing data (adding greeks)')
-            preprocess_main(start, end)  # TODO: add parameters to preprocess_main
+            preprocess_main(start, end)
             
             logger.info('inserting data into the destination database')
             insert_connection(con, start, end)  # TODO: add parameters to insert_connection
 
-            time.sleep(args.wait_interval)  # TODO: add to .env file
+            time.sleep(args.WAIT_INTERVAL)  # TODO: add to .env file
         except KeyboardInterrupt:
             logger.info('Exiting without saving last iteration')
             time.sleep(5)
+            # TODO: save last iteration or better deal with the exception
             break
 
 
