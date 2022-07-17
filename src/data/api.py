@@ -6,6 +6,7 @@ import json
 import api_endpoints
 import functools
 from itertools import repeat
+import logging
 
 
 symbols = {
@@ -18,15 +19,11 @@ def safe_query(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         try:
-            # print('\n')
-            # start_time = time.perf_counter()
             value = func(*args, **kwargs)
-            # end_time = time.perf_counter()
-            # run_time = end_time - start_time
-            # print(f"Query {func.__name__!r} in {run_time:.4f} secs")
             return value
         except BaseException:
-            print(f'{func.__name__} -- Query fail')
+            logger = logging.getLogger(__name__)
+            logger.info(f'{func.__name__} -- Query fail')
             return {}
     return wrapper
 
@@ -37,7 +34,6 @@ def get_coingecko_symbol(symbol: str, start: datetime) -> dict:
     raw = requests.get(api_url)
     data = raw.json()
 
-    print(symbol, '-- Coingecko price history -- Query successful')
     return data
 
 
@@ -49,8 +45,6 @@ def get_deribit_symbols(coin: str) -> list:
     symbols = [s['instrument_name'] for s in data if s['kind'] == 'option']
 
     # TODO: save other data as creation date, ticker size, min trade size, etc...
-
-    print('Get Symbols -- Query successful')
     return symbols
 
 
@@ -60,7 +54,6 @@ def get_deribit_symbol(symbol: str, start: datetime) -> dict:
     raw = requests.get(api_url)
     data = raw.json()['result']
 
-    print(symbol, '-- Contract price history -- Query successful')
     return data
 
 
@@ -70,7 +63,6 @@ def get_deribit_ticker(symbol: str) -> dict:
     raw = requests.get(api_url)
     data = raw.json()['result']
 
-    print(symbol, '-- Ticker -- Query successful')
     return data
 
 
@@ -79,8 +71,6 @@ def get_deribit_volatility(symbol: str, start_date: datetime, end_date=datetime.
     api_url = api_endpoints.deribit_volatility(symbol, start_date=start_date, end_date=end_date)
     raw = requests.get(api_url)
     data = raw.json()['result']
-
-    print(symbol, end_date, '-- Volatility history -- Query successful')
 
     if data['continuation']:
         new_end_date = datetime.fromtimestamp(data['continuation'] / 1000)
@@ -95,7 +85,6 @@ def get_glassnode_active(symbol: str) -> dict:
     raw = requests.get(api_url)
     data = raw.json()
 
-    print(symbol, '-- Active addresses -- Query successful')
     return data
 
 
@@ -105,7 +94,6 @@ def get_glassnode_volume(symbol: str) -> dict:
     raw = requests.get(api_url)
     data = raw.json()
 
-    print(symbol, '-- Volume on-chain -- Query successful')
     return data
 
 
@@ -115,7 +103,6 @@ def get_glassnode_tx(symbol: str) -> dict:
     raw = requests.get(api_url)
     data = raw.json()
 
-    print(symbol, '-- Transactions on-chain -- Query successful')
     return data
 
 
@@ -125,7 +112,6 @@ def get_glassnode_history(symbol: str, start: datetime) -> dict:
     raw = requests.get(api_url)
     data = raw.json()
 
-    print(symbol, '-- Glassnode price history -- Query successful')
     return data
 
 
@@ -136,8 +122,6 @@ def get_polygon_symbol(symbol: str, start_date: datetime = datetime(2019, 12, 31
     api_url = api_endpoints.polygon_history(symbol, start_date = start_date)
     raw = requests.get(api_url)
     data = raw.json()
-
-    print(symbol, start_date, '-- Polygon price history -- Query successful')
 
     last_timestamp = data['results'][-1]['t']/1000
     if last_timestamp < datetime.timestamp(datetime.now().replace(hour=0)):
@@ -160,7 +144,7 @@ def mkdir_if_exists(path):
         os.mkdir(path)
 
 
-def main(start, end):
+def main(start: datetime, end: datetime):
     mkdir_if_exists('./data/raw/onchain')
     mkdir_if_exists('./data/raw/onchain/tx')
     mkdir_if_exists('./data/raw/onchain/volume')
