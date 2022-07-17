@@ -97,7 +97,6 @@ def get_underlying_volume(coin: str) -> pd.DataFrame:
     return pd.DataFrame(zipped, columns=['t', 'u_volume']).set_index('t')
 
 
-@filter_output_df(lambda x: , 't')
 def get_onchain_tx(coin: str) -> pd.DataFrame:
     """Returns useful data from onchain/tx folder.
     Returns: tx by timestamp
