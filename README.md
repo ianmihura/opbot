@@ -5,15 +5,21 @@ TO DO's
 ------------
 
 * [ ] Build the ETL pipeline and get historical data from Deribit API
-  * [ ] Design the data warehouse structure
-  * [ ] Design the extraction from the API
-    * [ ] Get historical contracts
-    * [ ] Get historical market price & volatility
-  * [ ] Define how data will be transformed before being loaded to the DB
-    * [ ] Calculate IV for each contract
-    * [ ] Calculate greeks for each contract
+  * [x] Design the data warehouse structure
+  * [x] Design the extraction from the API
+    * [x] Get historical contracts
+    * [x] Get historical market price & volatility
+  * [x] Define how data will be transformed before being loaded to the DB
+    * [x] Calculate IV for each contract
+    * [x] Calculate greeks for each contract
+  * [ ] Develop a script and infrastructure to continuously gather data
 * [ ] Design the RL algorithm to learn how to trade
+  * [ ] Pre-train a time-series model t understand crypto behaviour
+  * [ ] Transfer learning the time series model to a RL agent, train with few data
 * [ ] Build the environment that constructs the state space, computes rewards and manages the porfolio during training and validation.
+  * [ ] Define state space
+  * [ ] Define action space
+  * [ ] Test different reward functions
 
 Project Organization
 ------------

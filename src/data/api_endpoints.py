@@ -79,10 +79,11 @@ def deribit_volatility(
     return f'https://www.deribit.com/api/v2/public/get_volatility_index_data?currency={s}&start_timestamp={start}&end_timestamp={end}&resolution={r}'
 
 
-def glassnode_history(symbol: str) -> str:
+def glassnode_history(symbol: str, start_date:datetime) -> str:
     """Coin price history, in usd, pre 2011, amazing granularity (1h).
     Useful for price history
     Symbol example: 'BTC' or 'ETH'
+    TODO: Add start_date to the endpoint
     """
     GLASS_API = os.environ.get("GLASS_API")
     s = quote(symbol)

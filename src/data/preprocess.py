@@ -1,15 +1,46 @@
-from datetime import datetime
 import json
 import os
 import time
+import functools
 import pandas as pd
 import numpy as np
+from datetime import datetime
+
 import finance
 from tqdm import tqdm
 
 
 # TODO: add DVOL to underlying
 # TODO: interploate u_volume to be similar to recet
+
+
+def filter_output_df(condition, column: str):
+    """Filters a DataFrame by a condition on a specific column.
+    Args:
+        condition: a function that takes a value and returns a boolean
+        column: the column to filter on
+    """
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            df = func(*args, **kwargs)
+            if column not in df.columns:
+                raise ValueError(f'Column {column} not in DataFrame')
+            return df[df[column].apply(condition)]
+        return wrapper
+    return decorator
+
+
+def filter_between(inp_df: pd.DataFrame, start_date: datetime, end_date: datetime) -> pd.DataFrame:
+    """Filters a DataFrame by a start and end date.
+    Args:
+        inp_df: the DataFrame to filter
+        start_date: the start date
+        end_date: the end date
+    """
+    start_timestamp = start_date.timestamp()
+    end_timestamp = end_date.timestamp()
+    return inp_df[(inp_df.index >= start_timestamp) & (inp_df.index <= end_timestamp)]
 
 
 def get_24h_data(data: list) -> np.ndarray:
@@ -155,14 +186,25 @@ def contract_metrics(row) -> dict:
         is_call = bool(row['is_call']))
 
 
-def preprocess(coin: str):
+def preprocess(coin: str, start_date: datetime, end_date: datetime):
     """Preprocesses raw data by coin"""
     u_recent_df = get_underlying_recent(coin)
+    u_recent_df = filter_between(u_recent_df, start_date, end_date)
+
     u_price_df = get_underlying_price(coin)
+    u_price_df = filter_between(u_price_df, start_date, end_date)
+
     u_volume_df = get_underlying_volume(coin)
+    u_volume_df = filter_between(u_volume_df, start_date, end_date)
+
     chain_tx_df = get_onchain_tx(coin)
+    chain_tx_df = filter_between(chain_tx_df, start_date, end_date)
+
     chain_volume_df = get_onchain_volume(coin)
+    chain_volume_df = filter_between(chain_volume_df, start_date, end_date)
+
     c_df = get_contract_data(coin)
+    c_df = filter_between(c_df, start_date, end_date)
 
     underlying_df = u_price_df.join(u_volume_df).join(chain_tx_df).join(chain_volume_df).join(u_recent_df)
     underlying_df = underlying_df[~underlying_df.index.duplicated(keep='first')]
@@ -192,13 +234,13 @@ def preprocess(coin: str):
     contract_df.fillna(0).to_csv(f'./data/interim/{coin}_contracts.csv')
 
 
-def main():
+def main(start: datetime, end: datetime):
     pd.set_option('display.float_format', lambda x: '%.6f' % x)
     
     underlying_dir = os.listdir(f'./data/raw/underlying/price')
     coins = [*map(lambda x: x.split('.')[0], underlying_dir)]
 
-    [preprocess(coin) for coin in coins]
+    [preprocess(coin, start, end) for coin in coins]
 
 
 if __name__ == "__main__":
