@@ -1,4 +1,5 @@
 import os
+import logging
 import pandas as pd
 
 import sql_insert
@@ -6,7 +7,7 @@ import sql_select
 
 
 def insert_underlying_data(con, underlying_id, coin):
-    underlying_data_df = pd.read_csv(f'./data/interim/{coin}_underlying_data.csv')
+    underlying_data_df = pd.read_csv(f'./data/interim/underlying/{coin}.csv')
     underlying_data_df = underlying_data_df.fillna(0)
     make_underlying_data = lambda u: [
         underlying_id, 
@@ -28,7 +29,7 @@ def insert_underlying_data(con, underlying_id, coin):
 
 
 def insert_contract_meta(con, underlying_id, coin):
-    contract_df = pd.read_csv(f'./data/interim/{coin}_contracts.csv')
+    contract_df = pd.read_csv(f'./data/interim/contracts/{coin}.csv')
     make_contract_meta = lambda c: [
         underlying_id,
         c['contract'],
@@ -43,7 +44,7 @@ def insert_contract_meta(con, underlying_id, coin):
 
 def insert_contract_data(con, contract_id):
     coin = contract_id[1].split('-')[0]
-    contract_df = pd.read_csv(f'./data/interim/{coin}_contracts.csv')
+    contract_df = pd.read_csv(f'./data/interim/contracts/{coin}.csv')
     contract_df = contract_df[contract_df['contract'] == contract_id[1]]
 
     make_contract_data = lambda c: [
@@ -70,22 +71,24 @@ def insert_connection(con):
     """Runs db scripts to turn interim data (./data/interim)
     into clean data ready to be analyzed (./data/processed/datawarehouse.db)
     """
+    logger = logging.getLogger(__name__)
+
     # underlying metadata
     raw_underlying_dir = os.listdir(f'./data/raw/underlying/price')
     underlying_meta = [*map(lambda x: (x.split('.')[0],), raw_underlying_dir)]
-    print('Insert -- underlying metadata')
+    logger.info('Insert -- underlying metadata')
     sql_insert.insert_underlying_meta(con, underlying_meta)
 
     # underlying data
     underlying_meta = sql_select.get_underlying_meta(con)
-    print('Insert -- underlying data')
+    logger.info('Insert -- underlying data')
     [insert_underlying_data(con, coin[0], coin[1]) for coin in underlying_meta]
 
     # contracts meta
-    print('Insert -- contract metadata')
+    logger.info('Insert -- contract metadata')
     [insert_contract_meta(con, coin[0], coin[1]) for coin in underlying_meta]
 
     # contracts data
     contract_ids = sql_select.get_contracts_ids(con)
-    print('Insert -- contract data')
+    logger.info('Insert -- contract data')
     [insert_contract_data(con, contract_id) for contract_id in contract_ids]

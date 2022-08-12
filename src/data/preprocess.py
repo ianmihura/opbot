@@ -5,6 +5,7 @@ import functools
 import pandas as pd
 import numpy as np
 from datetime import datetime
+import logging
 
 import finance
 from tqdm import tqdm
@@ -188,6 +189,8 @@ def contract_metrics(row) -> dict:
 
 def preprocess(coin: str, start_date: datetime, end_date: datetime):
     """Preprocesses raw data by coin"""
+    logger = logging.getLogger(__name__)
+    
     u_recent_df = get_underlying_recent(coin)
     u_recent_df = filter_between(u_recent_df, start_date, end_date)
 
@@ -209,16 +212,16 @@ def preprocess(coin: str, start_date: datetime, end_date: datetime):
     underlying_df = u_price_df.join(u_volume_df).join(chain_tx_df).join(chain_volume_df).join(u_recent_df)
     underlying_df = underlying_df[~underlying_df.index.duplicated(keep='first')]
 
-    print(f'{coin} -- Preprocess -- calculating volatility')
+    logger.info(f'{coin} -- Preprocess -- calculating volatility')
     underlying_df["volatility"] = finance.volatility(underlying_df["u_close"])
     contract_df = c_df.join(underlying_df, on='t').drop_duplicates()
 
-    print(f'{coin} -- Preprocess -- calculating greeks')
+    logger.info(f'{coin} -- Preprocess -- calculating greeks')
     tqdm.pandas()
     metrics = contract_df.progress_apply(contract_metrics, axis=1, result_type='expand')
     contract_df = contract_df.join(metrics)
 
-    print(f'{coin} -- Preprocess -- all calculations done')
+    logger.info(f'{coin} -- Preprocess -- all calculations done')
     contract_df = contract_df.drop(columns=[
         'recent_price',
         'recent_volume',
@@ -230,8 +233,8 @@ def preprocess(coin: str, start_date: datetime, end_date: datetime):
         'u_volume',
         'chain_volume',
         'chain_tx'])
-    underlying_df.fillna(0).to_csv(f'./data/interim/{coin}_underlying_data.csv')
-    contract_df.fillna(0).to_csv(f'./data/interim/{coin}_contracts.csv')
+    underlying_df.fillna(0).to_csv(f'./data/interim/underlying/{coin}.csv')
+    contract_df.fillna(0).to_csv(f'./data/interim/contracts/{coin}.csv')
 
 
 def main(start: datetime, end: datetime):
