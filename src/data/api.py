@@ -159,20 +159,18 @@ def main(start: datetime, end: datetime):
     mkdir_if_exists('./data/raw/underlying/dvol')
 
     for coin_name, coin in symbols.items():
-        
         contracts = get_deribit_symbols(coin)
-        contracts = contracts  # testing is for cowards
 
-        save_asset(coin, 'onchain/tx', get_glassnode_tx(coin))  # checked
-        save_asset(coin, 'onchain/volume', get_glassnode_volume(coin))  # checked
-        save_asset(coin, 'onchain/active', get_glassnode_active(coin))  # checked
+        save_asset(coin, 'onchain/tx', get_glassnode_tx(coin))
+        save_asset(coin, 'onchain/volume', get_glassnode_volume(coin))
+        save_asset(coin, 'onchain/active', get_glassnode_active(coin))
         save_asset(coin, 'contracts/metadata', dict(zip(contracts,
             map(get_deribit_ticker, contracts))))
         save_asset(coin, 'contracts/data', dict(zip(contracts,
-            map(get_deribit_symbol, contracts, repeat(start)))))  # checked
-        save_asset(coin, 'underlying/price', get_glassnode_history(coin, start))  # left a TODO
-        save_asset(coin, 'underlying/volume', get_coingecko_symbol(coin_name))  # checked
-        save_asset(coin, 'underlying/recent', get_polygon_symbol(coin, start_date=start))  # checked
+            map(get_deribit_symbol, contracts, repeat(start)))))
+        save_asset(coin, 'underlying/price', get_glassnode_history(coin, start))
+        save_asset(coin, 'underlying/volume', get_coingecko_symbol(coin_name))
+        save_asset(coin, 'underlying/recent', get_polygon_symbol(coin, start_date=start))
         save_asset(coin, 'underlying/dvol', get_deribit_volatility(coin, start))
 
 

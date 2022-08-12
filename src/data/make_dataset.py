@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import os
+import os, shutil
 import logging
 from dotenv import find_dotenv, dotenv_values
 
@@ -10,6 +10,18 @@ from preprocess import main as preprocess_main
 from api import main as api_main
 from insert_dataset import insert_connection
 import sql_create
+
+
+def rm_files_recurse(folder):
+    for filename in os.listdir(folder):
+        file_path = os.path.join(folder, filename)
+        try:
+            if os.path.isfile(file_path) or os.path.islink(file_path):
+                os.unlink(file_path)
+            elif os.path.isdir(file_path):
+                rm_files_recurse(file_path)
+        except Exception as e:
+            print('Failed to delete %s. Reason: %s' % (file_path, e))
 
 
 def main(args):
@@ -34,6 +46,10 @@ def main(args):
     
     logger.info('inserting data into database (interim -> processed)')
     insert_connection(con)
+
+    logger.info('cleanup: delete intermediate files (raw & interim)')
+    rm_files_recurse('raw')
+    rm_files_recurse('interim')
 
 
 if __name__ == '__main__':

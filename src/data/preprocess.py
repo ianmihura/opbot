@@ -161,16 +161,12 @@ def preprocess(coin: str):
     """Preprocesses raw data by coin"""
     logger = logging.getLogger(__name__)
     
+    logger.info(f'{coin} -- Preprocess -- getting interim data')
     u_recent_df = get_underlying_recent(coin)
-
     u_price_df = get_underlying_price(coin)
-
     u_volume_df = get_underlying_volume(coin)
-
     chain_tx_df = get_onchain_tx(coin)
-
     chain_volume_df = get_onchain_volume(coin)
-
     c_df = get_contract_data(coin)
 
     underlying_df = u_price_df.join(u_volume_df).join(chain_tx_df).join(chain_volume_df).join(u_recent_df)
