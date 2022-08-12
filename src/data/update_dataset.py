@@ -20,7 +20,9 @@ def main(args):
     logger = logging.getLogger(__name__)
     con = sqlite3.connect(os.path.join(args.output_filepath, args.DATA_WAREHOUSE_FILE))
     logger.info("Connected to database")
-    while args.continuous_update:
+    first_time = True
+    while args.continuous_update or first_time:
+        first_time = False
         try:
             start = datetime.fromtimestamp(get_last_point(con))
             end = datetime.now()
@@ -29,12 +31,13 @@ def main(args):
             api_main(start, end)
 
             logger.info('preprocessing data (adding greeks)')
-            preprocess_main(start, end)
+            preprocess_main()
             
             logger.info('inserting data into the destination database')
-            insert_connection(con, start, end)  # TODO: add parameters to insert_connection
+            insert_connection(con)
 
-            time.sleep(args.WAIT_INTERVAL)  # TODO: add to .env file
+            time.sleep(args.WAIT_INTERVAL)
+
         except KeyboardInterrupt:
             logger.info('Exiting without saving last iteration')
             time.sleep(5)
