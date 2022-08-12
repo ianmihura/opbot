@@ -1,18 +1,8 @@
 import os
-import sqlite3
 import pandas as pd
 
-import create_db
-import insert_data
-import select_data
-
-
-def create_connection(db_file: str = './data/processed/datawarehouse.db'):
-    """Creates the empty db to work with: datawarehouse.db
-    Returns a connection object to the specified db"""
-    if os.path.exists(db_file):
-        os.remove(db_file)
-    return sqlite3.connect(db_file)
+import sql_insert
+import sql_select
 
 
 def insert_underlying_data(con, underlying_id, coin):
@@ -34,7 +24,7 @@ def insert_underlying_data(con, underlying_id, coin):
         u['volatility']]
     underlying_data = [make_underlying_data(row) for i, row in underlying_data_df.iterrows()]
 
-    insert_data.insert_underlying_data(con, underlying_data)
+    sql_insert.insert_underlying_data(con, underlying_data)
 
 
 def insert_contract_meta(con, underlying_id, coin):
@@ -48,7 +38,7 @@ def insert_contract_meta(con, underlying_id, coin):
     contract_meta = [make_contract_meta(row) for i, row in contract_df.iterrows()]
     contract_meta = list(set(tuple(sub) for sub in contract_meta))
 
-    insert_data.insert_contracts_meta(con, contract_meta)
+    sql_insert.insert_contracts_meta(con, contract_meta)
 
 
 def insert_contract_data(con, contract_id):
@@ -73,7 +63,7 @@ def insert_contract_data(con, contract_id):
         c['iv']]
     contract_data = [make_contract_data(row) for i, row in contract_df.iterrows()]
 
-    insert_data.insert_contracts_data(con, contract_data)
+    sql_insert.insert_contracts_data(con, contract_data)
 
 
 def insert_connection(con):
@@ -84,10 +74,10 @@ def insert_connection(con):
     raw_underlying_dir = os.listdir(f'./data/raw/underlying/price')
     underlying_meta = [*map(lambda x: (x.split('.')[0],), raw_underlying_dir)]
     print('Insert -- underlying metadata')
-    insert_data.insert_underlying_meta(con, underlying_meta)
+    sql_insert.insert_underlying_meta(con, underlying_meta)
 
     # underlying data
-    underlying_meta = select_data.get_underlying_meta(con)
+    underlying_meta = sql_select.get_underlying_meta(con)
     print('Insert -- underlying data')
     [insert_underlying_data(con, coin[0], coin[1]) for coin in underlying_meta]
 
@@ -96,17 +86,6 @@ def insert_connection(con):
     [insert_contract_meta(con, coin[0], coin[1]) for coin in underlying_meta]
 
     # contracts data
-    contract_ids = select_data.get_contracts_ids(con)
+    contract_ids = sql_select.get_contracts_ids(con)
     print('Insert -- contract data')
     [insert_contract_data(con, contract_id) for contract_id in contract_ids]
-
-
-def main():
-    con = create_connection()
-    create_db.create(con)
-
-    insert_connection(con)
-
-
-if __name__ == '__main__':
-    main()

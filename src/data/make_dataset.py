@@ -10,6 +10,7 @@ import argparse
 from preprocess import main as preprocess_main
 from api import main as api_main
 from insert_dataset import insert_connection
+import sql_create
 
 
 import pdb
@@ -20,17 +21,17 @@ def main(args):
     cleaned data ready to be analyzed (saved in ../processed).
     """
     logger = logging.getLogger(__name__)
-    logger.info('making final data set from raw data')
-    logger.info(f'requesting data from api')
+    logger.info('requesting data from api')
     api_main()
 
     logger.info('preprocessing data (adding greeks)')
     preprocess_main()
 
-    # read and connect to the output filepath (destination DW)
+    logger.info('creating sqlite database')
     con = sqlite3.connect(os.path.join(args.output_filepath, args.DATA_WAREHOUSE_FILE))
+    sql_create.create(con)
     
-    logger.info('inserting data into the destination database')
+    logger.info('inserting data into database')
     insert_connection(con)
 
 
